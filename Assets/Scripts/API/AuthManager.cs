@@ -1,4 +1,3 @@
-using Photon.Pun;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -112,38 +111,45 @@ public class AuthManager : MonoBehaviour
 
     private void OnLoginSuccess(string responseJson)
     {
+        HandleAuthSuccess(responseJson, "Неверный логин или пароль");
+    }
+
+    private void OnRegisterSuccess(string responseJson)
+    {
+        HandleAuthSuccess(responseJson, "Не удалось зарегистрироваться");
+    }
+
+    private void HandleAuthSuccess(string responseJson, string fallbackError)
+    {
         AuthResponse response = JsonUtility.FromJson<AuthResponse>(responseJson);
 
-        if (response != null && response.status && response.user != null)
+        if (response != null &&
+            !string.IsNullOrEmpty(response.token) &&
+            response.user != null)
         {
             PlayerSession.SaveSession(
                 response.user.id,
                 response.user.login,
                 response.user.name,
-                response.user.totalScore,
                 response.token
             );
 
             SetMessage("");
-            PhotonNetwork.NickName = response.user.name;
-            menuManager.ShowMainMenu();
+            menuManager.OnAuthenticated();
         }
         else
         {
-            SetMessage("Неверный логин или пароль");
+            SetMessage(fallbackError);
         }
-    }
-
-    private void OnRegisterSuccess(string responseJson)
-    {
-        SetMessage("Регистрация успешна. Теперь войди.");
-        menuManager.ShowLogin();
     }
 
     private void OnRequestError(string error)
     {
         Debug.LogError(error);
-        SetMessage("Ошибка запроса к серверу");
+        ErrorResponse response = JsonUtility.FromJson<ErrorResponse>(error);
+        SetMessage(response != null && !string.IsNullOrEmpty(response.error)
+            ? response.error
+            : "Ошибка запроса к серверу");
     }
 
     private void SetMessage(string text)

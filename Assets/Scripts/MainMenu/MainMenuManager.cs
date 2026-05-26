@@ -1,12 +1,9 @@
-using Photon.Pun;
+﻿using Photon.Pun;
 using Photon.Realtime;
 
 using System.Collections;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Audio;
-using UnityEngine.SceneManagement;
-using UnityEngine.TextCore.Text;
 using UnityEngine.UI;
 
 using Hashtable = ExitGames.Client.Photon.Hashtable;
@@ -15,10 +12,8 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 {
     [SerializeField] private GameObject mainMenuPage;
     [SerializeField] private GameObject settingsPage;
-    [SerializeField] private GameObject levelsPage;
     [SerializeField] private GameObject registerPage;
     [SerializeField] private GameObject loginPage;
-    [SerializeField] private GameObject leaderBoardPage;
 
     [SerializeField] private GameObject chooseConnectionPage;
     [SerializeField] private GameObject createRoomPage;
@@ -28,10 +23,6 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
     [SerializeField] private TMP_InputField joinCodeInput;
     [SerializeField] private TMP_Text roomCodeText;
-
-    [SerializeField] private Button level1Button;
-    [SerializeField] private Button level2Button;
-    [SerializeField] private Button level3Button;
 
     [SerializeField] private TMP_Text hostPlayer1Text;
     [SerializeField] private TMP_Text hostPlayer2Text;
@@ -61,9 +52,6 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
     [SerializeField] private Button readyButton;
     [SerializeField] private Button startGameButton;
 
-    [SerializeField] private AudioMixer audioMixer;
-    [SerializeField] private bool soundOn = true;
-
     private Vector3 normalScale = Vector3.one;
     private Vector3 selectedScale = new Vector3(1.15f, 1.15f, 1f);
 
@@ -85,10 +73,7 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
         if (PlayerSession.IsAuthorized)
         {
-            ShowMainMenu();
-            StartCoroutine(LoadProgress());
-
-            ConnectToPhoton();
+            StartCoroutine(ValidateSavedSession());
         }
         else
         {
@@ -110,17 +95,51 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
         }
     }
 
+    private IEnumerator ValidateSavedSession()
+    {
+        yield return ApiManager.Instance.GetRequest(
+            ApiRoutes.Me,
+            OnMeLoaded,
+            OnMeError,
+            true
+        );
+    }
+
+    private void OnMeLoaded(string responseJson)
+    {
+        MeResponse response = JsonUtility.FromJson<MeResponse>(responseJson);
+
+        if (response != null && response.user != null)
+        {
+            PlayerSession.UpdateUser(response.user);
+            OnAuthenticated();
+            return;
+        }
+
+        ClearInvalidSession();
+    }
+
+    private void OnMeError(string error)
+    {
+        Debug.LogWarning("Не удалось проверить сохраненный токен: " + error);
+        ClearInvalidSession();
+    }
+
+    private void ClearInvalidSession()
+    {
+        PlayerSession.Clear();
+        ShowLogin();
+    }
+
     private void HideAllPages()
     {
-        mainMenuPage.SetActive(false);
-        settingsPage.SetActive(false);
-        levelsPage.SetActive(false);
-        registerPage.SetActive(false);
-        loginPage.SetActive(false);
-        leaderBoardPage.SetActive(false);
-        chooseConnectionPage.SetActive(false);
-        createRoomPage.SetActive(false);
-        joinRoomPage.SetActive(false);
+        if (mainMenuPage != null) mainMenuPage.SetActive(false);
+        if (settingsPage != null) settingsPage.SetActive(false);
+        if (registerPage != null) registerPage.SetActive(false);
+        if (loginPage != null) loginPage.SetActive(false);
+        if (chooseConnectionPage != null) chooseConnectionPage.SetActive(false);
+        if (createRoomPage != null) createRoomPage.SetActive(false);
+        if (joinRoomPage != null) joinRoomPage.SetActive(false);
     }
 
     public void ShowMainMenu()
@@ -134,10 +153,17 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
         HideAllPages();
         settingsPage.SetActive(true);
     }
-    public void ShowLeaderboard()
+
+    public void OnAuthenticated()
     {
-        HideAllPages();
-        leaderBoardPage.SetActive(true);
+        ShowMainMenu();
+
+        if (!string.IsNullOrEmpty(PlayerSession.Name))
+        {
+            PhotonNetwork.NickName = PlayerSession.Name;
+        }
+
+        ConnectToPhoton();
     }
 
     public void ShowConnectionSelection()
@@ -165,21 +191,6 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
         if (joinRoomPage != null) joinRoomPage.SetActive(true);
     }
 
-    public void ShowLevels()
-    {
-        HideAllPages();
-        levelsPage.SetActive(true);
-
-        if (PlayerSession.IsAuthorized)
-        {
-            StartCoroutine(LoadProgress());
-        }
-        else
-        {
-            UpdateLevelButtons();
-        }
-    }
-
     public void ShowRegister()
     {
         HideAllPages();
@@ -196,28 +207,6 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
     {
         PlayerSession.Clear();
         ShowLogin();
-        UpdateLevelButtons();
-    }
-
-    public void StartLevel1()
-    {
-        if (!PlayerSession.Level1Unlocked) return;
-        Time.timeScale = 1f;
-        PhotonNetwork.LoadLevel("Level1");
-    }
-
-    public void StartLevel2()
-    {
-        if (!PlayerSession.Level2Unlocked) return;
-        Time.timeScale = 1f;
-        SceneManager.LoadScene("Level2");
-    }
-
-    public void StartLevel3()
-    {
-        if (!PlayerSession.Level3Unlocked) return;
-        Time.timeScale = 1f;
-        SceneManager.LoadScene("Level3");
     }
 
     public void ToggleSound()
@@ -228,49 +217,6 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
         }
     }
 
-    private IEnumerator LoadProgress()
-    {
-        yield return ApiManager.Instance.GetRequest(
-            ApiRoutes.GetProgress + "?userId=" + PlayerSession.UserId,
-            OnProgressLoaded,
-            OnProgressError,
-            true
-        );
-    }
-
-    private void OnProgressLoaded(string responseJson)
-    {
-        ProgressResponse response = JsonUtility.FromJson<ProgressResponse>(responseJson);
-
-        PlayerSession.Level1Unlocked = true;
-        PlayerSession.Level2Unlocked = false;
-        PlayerSession.Level3Unlocked = false;
-
-        if (response != null && response.progress != null)
-        {
-            foreach (var item in response.progress)
-            {
-                if (item.levelNumber == 1) PlayerSession.Level1Unlocked = item.isUnlocked;
-                if (item.levelNumber == 2) PlayerSession.Level2Unlocked = item.isUnlocked;
-                if (item.levelNumber == 3) PlayerSession.Level3Unlocked = item.isUnlocked;
-            }
-        }
-
-        UpdateLevelButtons();
-    }
-
-    private void OnProgressError(string error)
-    {
-        Debug.LogError("Ошибка загрузки прогресса: " + error);
-        UpdateLevelButtons();
-    }
-
-    private void UpdateLevelButtons()
-    {
-        if (level1Button != null) level1Button.interactable = PlayerSession.Level1Unlocked;
-        if (level2Button != null) level2Button.interactable = PlayerSession.Level2Unlocked;
-        if (level3Button != null) level3Button.interactable = PlayerSession.Level3Unlocked;
-    }
 
     public void CreatePhotonRoom()
     {
@@ -315,13 +261,13 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
     public override void OnConnectedToMaster()
     {
-        Debug.Log("Photon: Подключено к мастер-серверу.");
+        Debug.Log("Photon: подключено к мастер-серверу.");
         PhotonNetwork.JoinLobby();
     }
 
     public override void OnJoinedLobby()
     {
-        Debug.Log("Photon: Успешно вошли в лобби! Сеть готова.");
+        Debug.Log("Photon: успешно вошли в лобби. Сеть готова.");
     }
 
     public override void OnJoinedRoom()
@@ -334,7 +280,7 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
 
-        Debug.Log($"Photon: Вы вошли в комнату {PhotonNetwork.CurrentRoom.Name}");
+        Debug.Log($"Photon: вы вошли в комнату {PhotonNetwork.CurrentRoom.Name}");
 
         if (PhotonNetwork.IsMasterClient)
         {
@@ -362,7 +308,7 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
     public override void OnJoinRoomFailed(short returnCode, string message)
     {
-        Debug.LogError($"Photon: Ошибка входа в комнату: {message}");
+        Debug.LogError($"Photon: ошибка входа в комнату: {message}");
     }
 
 

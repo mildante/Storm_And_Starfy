@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -89,7 +89,6 @@ public class LevelManager : MonoBehaviour
 
     private IEnumerator FinishRoutine()
     {
-        SendLevelComplete();
         yield return new WaitForSeconds(0.5f);
         buttonManager.ShowWinPanel();
     }
@@ -108,27 +107,6 @@ public class LevelManager : MonoBehaviour
         buttonManager.ShowLosePanel();
     }
 
-    private void SendLevelComplete()
-    {
-        if (!PlayerSession.IsAuthorized)
-            return;
-
-        CompleteLevelRequest request = new CompleteLevelRequest
-        {
-            userId = PlayerSession.UserId,
-            levelNumber = GetCurrentLevelNumber(),
-            score = collectedStars * 100
-        };
-
-        StartCoroutine(ApiManager.Instance.PostRequest(
-            ApiRoutes.CompleteLevel,
-            JsonUtility.ToJson(request),
-            OnCompleteLevelSuccess,
-            OnCompleteLevelError,
-            true
-        ));
-    }
-
     private int GetCurrentLevelNumber()
     {
         string sceneName = SceneManager.GetActiveScene().name;
@@ -139,20 +117,6 @@ public class LevelManager : MonoBehaviour
         return 1;
     }
 
-    private void OnCompleteLevelSuccess(string responseJson)
-    {
-        CompleteLevelResponse response = JsonUtility.FromJson<CompleteLevelResponse>(responseJson);
-
-        if (response != null && response.status)
-        {
-            PlayerSession.TotalScore = response.totalScore;
-        }
-    }
-
-    private void OnCompleteLevelError(string error)
-    {
-        Debug.LogError("Ошибка сохранения уровня: " + error);
-    }
 
     public int GetScore()
     {
