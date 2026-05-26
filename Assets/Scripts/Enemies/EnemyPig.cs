@@ -94,33 +94,17 @@ public class EnemyPig : MonoBehaviour
     {
         if (isDead) return;
 
-        if (!collision.collider.CompareTag("Player")) return;
+        if (!collision.collider.CompareTag("Storm") && !collision.collider.CompareTag("Starfy")) return;
 
-        bool playerOnHead = Physics2D.OverlapCircle(headPoint.position, headCheckRadius, playerLayer);
-
-        if (playerOnHead)
-        {
-            Rigidbody2D playerRb = collision.collider.GetComponent<Rigidbody2D>();
-
-            if (playerRb != null)
-            {
-                playerRb.linearVelocity = new Vector2(playerRb.linearVelocity.x, bounceForce);
-            }
-
-            Die();
-        }
-        else
-        {
-            PlayerHealth playerHealth = collision.collider.GetComponent<PlayerHealth>();
+        PlayerHealth playerHealth = collision.collider.GetComponent<PlayerHealth>();
 
             if (playerHealth != null)
             {
                 playerHealth.TakeDamage();
             }
-        }
     }
 
-    private void Die()
+    public void Die()
     {
         isDead = true;
 

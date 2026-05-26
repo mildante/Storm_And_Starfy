@@ -135,7 +135,6 @@ public class LevelManager : MonoBehaviour
 
         if (sceneName == "Level1") return 1;
         if (sceneName == "Level2") return 2;
-        if (sceneName == "Level3") return 3;
 
         return 1;
     }
@@ -158,5 +157,9 @@ public class LevelManager : MonoBehaviour
     public int GetScore()
     {
         return collectedStars * 100;
+    }
+    public void SetPlayer(Transform playerTransform)
+    {
+        player = playerTransform;
     }
 }

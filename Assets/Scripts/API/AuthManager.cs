@@ -1,3 +1,4 @@
+using Photon.Pun;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -124,6 +125,7 @@ public class AuthManager : MonoBehaviour
             );
 
             SetMessage("");
+            PhotonNetwork.NickName = response.user.name;
             menuManager.ShowMainMenu();
         }
         else

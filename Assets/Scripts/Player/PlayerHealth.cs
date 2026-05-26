@@ -6,9 +6,9 @@ public class PlayerHealth : MonoBehaviour
     private int maxLives = 3;
     private int currentLives;
 
-    public Transform spawnPoint;
+    private Vector3 respawnPosition;
 
-    private PlayerMovement playerMovement;
+    private MonoBehaviour movementScript;
     private Rigidbody2D rb;
     private SpriteRenderer sr;
 
@@ -17,9 +17,17 @@ public class PlayerHealth : MonoBehaviour
     private void Awake()
     {
         currentLives = maxLives;
-        playerMovement = GetComponent<PlayerMovement>();
+
+        movementScript =
+            GetComponent<PlayerMovement>() ??
+            (MonoBehaviour)GetComponent<StarfyMovement>();
+
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
+
+        respawnPosition = transform.position;
+
+        LevelManager.Instance.UpdateHeartsUI(currentLives);
     }
 
     private void Start()
@@ -29,7 +37,7 @@ public class PlayerHealth : MonoBehaviour
 
     public void TakeDamage()
     {
-        if (isInvulnerable)return;
+        if (isInvulnerable) return;
         currentLives--;
         LevelManager.Instance.UpdateHeartsUI(currentLives);
 
@@ -51,15 +59,15 @@ public class PlayerHealth : MonoBehaviour
 
     private void Respawn()
     {
-        playerMovement.enabled = false;
+        movementScript.enabled = false;
         rb.linearVelocity = Vector2.zero;
-        transform.position = spawnPoint.position;
-        playerMovement.enabled = true;
+        transform.position = respawnPosition;
+        movementScript.enabled = true;
     }
 
     private void Die()
     {
-        playerMovement.enabled = false;
+        movementScript.enabled = false;
         rb.linearVelocity = Vector2.zero;
         Time.timeScale = 0f;
         LevelManager.Instance.LoseLevel();

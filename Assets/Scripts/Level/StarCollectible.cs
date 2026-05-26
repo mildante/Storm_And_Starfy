@@ -4,7 +4,7 @@ public class StarCollectible : MonoBehaviour
 {
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (!collision.CompareTag("Player"))
+        if (!collision.CompareTag("Storm"))
             return;
 
         if (SoundManager.Instance != null)
