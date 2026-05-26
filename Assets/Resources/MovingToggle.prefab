@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: -6856783768390940573}
   - component: {fileID: 4167518502793180716}
   - component: {fileID: 1116381032689860719}
+  - component: {fileID: 3789924633887423706}
   m_Layer: 0
   m_Name: MovingToggle
   m_TagString: Untagged
@@ -152,3 +153,25 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 0.73140025, y: 0.43559384}
   m_EdgeRadius: 0
+--- !u!114 &3789924633887423706
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6533339977383374139}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: PhotonUnityNetworking::Photon.Pun.PhotonView
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents: []
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0

@@ -1,14 +1,12 @@
 using UnityEngine;
-
-public class InvisibleLever : MonoBehaviour
+using Photon.Pun;
+public class InvisibleLever : MonoBehaviourPun
 {
     public Animator blockAnimator;
-
     public string boolParameter = "isActive";
 
     private bool isOn = true;
     private bool playerNear = false;
-
     private float originalScaleX;
 
     private void Start()
@@ -20,11 +18,12 @@ public class InvisibleLever : MonoBehaviour
     {
         if (playerNear && Input.GetKeyDown(KeyCode.E))
         {
-            ToggleLever();
+            photonView.RPC("ToggleLeverRPC", RpcTarget.AllBuffered);
         }
     }
 
-    private void ToggleLever()
+    [PunRPC]
+    private void ToggleLeverRPC()
     {
         isOn = !isOn;
 
@@ -36,11 +35,13 @@ public class InvisibleLever : MonoBehaviour
         {
             blockAnimator.SetBool(boolParameter, isOn);
         }
-
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        PhotonView pv = other.GetComponent<PhotonView>();
+        if (pv != null && !pv.IsMine) return;
+
         if (other.CompareTag("Storm") || other.CompareTag("Starfy"))
         {
             playerNear = true;
@@ -49,6 +50,9 @@ public class InvisibleLever : MonoBehaviour
 
     private void OnTriggerExit2D(Collider2D other)
     {
+        PhotonView pv = other.GetComponent<PhotonView>();
+        if (pv != null && !pv.IsMine) return;
+
         if (other.CompareTag("Storm") || other.CompareTag("Starfy"))
         {
             playerNear = false;

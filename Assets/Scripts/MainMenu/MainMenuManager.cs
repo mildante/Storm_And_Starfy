@@ -222,6 +222,8 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
     {
         string code = GenerateRoomCode(6);
 
+        roomCodeText.text = code;
+
         RoomOptions roomOptions = new RoomOptions
         {
             MaxPlayers = 2,
@@ -504,6 +506,12 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
             PhotonNetwork.PlayerList.Length == 2 &&
             guestReady;
     }
+
+    public void StartGame()
+    {
+        PhotonNetwork.LoadLevel("Level1");
+    }
+    
     public void OpenCharacterSelection()
     {
         photonView.RPC(nameof(RPC_OpenCharacterSelection),
