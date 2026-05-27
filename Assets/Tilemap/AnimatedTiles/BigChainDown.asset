@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13b75c95f34a00d4e8c04f76b73312e6, type: 3}
+  m_Name: BigChainDown
+  m_EditorClassIdentifier: Unity.2D.Tilemap.Extras::UnityEngine.Tilemaps.AnimatedTile
+  m_AnimatedSprites:
+  - {fileID: -983214184, guid: 2904c0b2b3ecd7542849aac05647d58d, type: 3}
+  - {fileID: 1569434393, guid: b3f8a07a28f870143a90406f804a07d4, type: 3}
+  - {fileID: -342772915, guid: f37baa469c9dace4fa330998336e81be, type: 3}
+  - {fileID: -1658062647, guid: a77bbb73f9d9a5349808253ba9df438f, type: 3}
+  - {fileID: 2129163118, guid: 12907ca2e4f19e34e8cc6d8b04e31043, type: 3}
+  - {fileID: -416157248, guid: a9deee39388230d47998bcb98587014e, type: 3}
+  - {fileID: 1965285627, guid: 69ff155942153494c98e94199b70f064, type: 3}
+  - {fileID: -2037253378, guid: eb90458abebbb414dbe0f4b5ae29ae7b, type: 3}
+  m_MinSpeed: 5
+  m_MaxSpeed: 1
+  m_AnimationStartTime: 0
+  m_AnimationStartFrame: 0
+  m_TileColliderType: 0
+  m_TileAnimationFlags: 0
