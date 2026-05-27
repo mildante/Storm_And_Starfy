@@ -287,10 +287,19 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.IsMasterClient)
         {
             ShowCreateRoomPage();
+            if (readyButton != null)
+            {
+                readyButton.interactable = false;
+            }
         }
         else
         {
             ShowJoinRoomPage();
+            if (readyButton != null)
+            {
+                readyButton.gameObject.SetActive(true);
+                readyButton.interactable = true;
+            }
         }
 
         UpdateRoomPlayersUI();
@@ -299,13 +308,13 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
     public override void OnPlayerEnteredRoom(Player newPlayer)
     {
         UpdateRoomPlayersUI();
-        UpdateReadyState();
+        UpdateLobbyStartButtonState();
     }
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
         UpdateRoomPlayersUI();
-        UpdateReadyState();
+        UpdateLobbyStartButtonState();
     }
 
     public override void OnJoinRoomFailed(short returnCode, string message)
@@ -373,7 +382,7 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
         if (changedProps.ContainsKey(READY_KEY))
         {
-            UpdateReadyState();
+            UpdateLobbyStartButtonState();
         }
     }
 
@@ -437,43 +446,65 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
             }
         }
 
-        UpdateStartButtonState();
+        UpdateLobbyStartButtonState();
     } 
 
-    private void UpdateStartButtonState()
+    private void UpdateLobbyStartButtonState()
     {
-        bool hostSelected = false;
-        bool guestSelected = false;
+        if (startGameButton == null)
+            return;
+
+        startGameButton.interactable = false;
+
+        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.PlayerList.Length != 2)
+            return;
 
         foreach (Player player in PhotonNetwork.PlayerList)
         {
-            if (!player.CustomProperties.TryGetValue(
-                CHAR_KEY,
-                out object value))
-                continue;
-
-            int selectedCharacter = (int)value;
-
-            if (selectedCharacter == 0)
-                continue;
-
             if (player.IsMasterClient)
-                hostSelected = true;
-            else
-                guestSelected = true;
+                continue;
+
+            if (player.CustomProperties.TryGetValue(READY_KEY, out object readyObj) &&
+                readyObj is bool isReady)
+            {
+                startGameButton.interactable = isReady;
+            }
+
+            return;
+        }
+    }
+
+    private bool CanStartGameWithSelectedCharacters()
+    {
+        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.PlayerList.Length != 2)
+            return false;
+
+        int firstSelection = GetSelectedCharacter(PhotonNetwork.PlayerList[0]);
+        int secondSelection = GetSelectedCharacter(PhotonNetwork.PlayerList[1]);
+
+        return
+            firstSelection != 0 &&
+            secondSelection != 0 &&
+            firstSelection != secondSelection;
+    }
+
+    private int GetSelectedCharacter(Player player)
+    {
+        if (player != null &&
+            player.CustomProperties.TryGetValue(CHAR_KEY, out object value) &&
+            value is int selectedCharacter)
+        {
+            return selectedCharacter;
         }
 
-        if (PhotonNetwork.IsMasterClient)
-        {
-            startGameButton.interactable =
-                PhotonNetwork.PlayerList.Length == 2
-                && hostSelected
-                && guestSelected;
-        }
+        return 0;
     }
 
     public void Ready()
     {
+        if (PhotonNetwork.IsMasterClient)
+            return;
+
         Hashtable props = new Hashtable
         {
             { READY_KEY, true }
@@ -481,39 +512,30 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
         PhotonNetwork.LocalPlayer.SetCustomProperties(props);
 
-        readyButton.interactable = false;
-    }
-
-    private void UpdateReadyState()
-    {
-        if (!PhotonNetwork.IsMasterClient)
-            return;
-
-        bool guestReady = false;
-
-        foreach (Player player in PhotonNetwork.PlayerList)
+        if (readyButton != null)
         {
-            if (player == PhotonNetwork.LocalPlayer)
-                continue;
-
-            if (player.CustomProperties.TryGetValue(READY_KEY, out object readyObj))
-            {
-                guestReady = (bool)readyObj;
-            }
+            readyButton.interactable = false;
         }
-
-        startGameButton.interactable =
-            PhotonNetwork.PlayerList.Length == 2 &&
-            guestReady;
     }
 
     public void StartGame()
     {
+        if (!CanStartGameWithSelectedCharacters())
+            return;
+
         PhotonNetwork.LoadLevel("Level1");
     }
     
     public void OpenCharacterSelection()
     {
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
+        UpdateLobbyStartButtonState();
+
+        if (startGameButton != null && !startGameButton.interactable)
+            return;
+
         photonView.RPC(nameof(RPC_OpenCharacterSelection),
             RpcTarget.All);
     }

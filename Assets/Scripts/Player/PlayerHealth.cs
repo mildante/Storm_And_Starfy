@@ -1,4 +1,5 @@
 using System.Collections;
+using Photon.Pun;
 using UnityEngine;
 
 public class PlayerHealth : MonoBehaviour
@@ -11,6 +12,7 @@ public class PlayerHealth : MonoBehaviour
     private MonoBehaviour movementScript;
     private Rigidbody2D rb;
     private SpriteRenderer sr;
+    private PhotonView photonView;
 
     private bool isInvulnerable = false;
 
@@ -24,20 +26,30 @@ public class PlayerHealth : MonoBehaviour
 
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
+        photonView = GetComponent<PhotonView>();
 
         respawnPosition = transform.position;
 
-        LevelManager.Instance.UpdateHeartsUI(currentLives);
+        if (IsOwnedByLocalPlayer() && LevelManager.Instance != null)
+        {
+            LevelManager.Instance.UpdateHeartsUI(currentLives);
+        }
     }
 
     private void Start()
     {
-        LevelManager.Instance.UpdateHeartsUI(currentLives);
+        if (IsOwnedByLocalPlayer() && LevelManager.Instance != null)
+        {
+            LevelManager.Instance.UpdateHeartsUI(currentLives);
+        }
     }
 
     public void TakeDamage()
     {
+        if (!IsOwnedByLocalPlayer()) return;
         if (isInvulnerable) return;
+        if (LevelManager.Instance == null) return;
+
         currentLives--;
         LevelManager.Instance.UpdateHeartsUI(currentLives);
 
@@ -69,7 +81,6 @@ public class PlayerHealth : MonoBehaviour
     {
         movementScript.enabled = false;
         rb.linearVelocity = Vector2.zero;
-        Time.timeScale = 0f;
         LevelManager.Instance.LoseLevel();
     }
 
@@ -89,6 +100,11 @@ public class PlayerHealth : MonoBehaviour
         sr.enabled = true;
 
         isInvulnerable = false;
+    }
+
+    private bool IsOwnedByLocalPlayer()
+    {
+        return photonView == null || photonView.IsMine;
     }
 
 }

@@ -47,6 +47,9 @@ public class StoryPanelController : MonoBehaviour
 
         yield return new WaitForSeconds(loadDelay);
 
-        PhotonNetwork.LoadLevel(nextSceneName);
+        if (!PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient)
+        {
+            PhotonNetwork.LoadLevel(nextSceneName);
+        }
     }
 }

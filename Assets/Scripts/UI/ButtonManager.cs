@@ -1,4 +1,5 @@
 using System.Collections;
+using Photon.Pun;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -47,7 +48,7 @@ public class ButtonManager : MonoBehaviour
         if (blockPause) return;
 
         isPaused = true;
-        Time.timeScale = 0f;
+        LevelManager.Instance?.SetLocalPlayerControl(false);
         pausePanel.SetActive(true);
         pauseAnimator.SetBool("isOpen", true);
     }
@@ -55,10 +56,11 @@ public class ButtonManager : MonoBehaviour
     public void ContinueGame()
     {
         isPaused = false;
-        Time.timeScale = 1f;
+        LevelManager.Instance?.SetLocalPlayerControl(true);
         pauseAnimator.SetBool("isOpen", false);
         StartCoroutine(HidePausePanel());
     }
+
     private IEnumerator HidePausePanel()
     {
         yield return new WaitForSeconds(0.4f);
@@ -69,9 +71,9 @@ public class ButtonManager : MonoBehaviour
     {
         blockPause = true;
         isPaused = false;
-        Time.timeScale = 0f;
+        LevelManager.Instance?.SetLocalPlayerControl(false);
 
-        textScore.text = "Очки: " + LevelManager.Instance.GetScore().ToString();
+        textScore.text = "Score: " + LevelManager.Instance.GetScore().ToString();
         gamePanel.SetActive(false);
         pausePanel.SetActive(false);
         losePanel.SetActive(false);
@@ -83,7 +85,7 @@ public class ButtonManager : MonoBehaviour
     {
         blockPause = true;
         isPaused = false;
-        Time.timeScale = 0f;
+        LevelManager.Instance?.SetLocalPlayerControl(false);
 
         gamePanel.SetActive(false);
         pausePanel.SetActive(false);
@@ -95,25 +97,27 @@ public class ButtonManager : MonoBehaviour
     public void RestartLevel()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        LevelManager.Instance?.RequestRestartLevel();
     }
 
     public void LoadMainMenu()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene("MainMenu");
+        LevelManager.Instance?.RequestReturnToMenu();
     }
 
     public void LoadNextLevel()
     {
         Time.timeScale = 1f;
 
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
         int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
 
         if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
-            SceneManager.LoadScene(nextSceneIndex);
+            PhotonNetwork.LoadLevel(nextSceneIndex);
         else
-            SceneManager.LoadScene("MainMenu");
+            LevelManager.Instance?.RequestReturnToMenu();
     }
-
 }

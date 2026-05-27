@@ -1,11 +1,21 @@
-﻿using System.Collections;
+using System.Collections;
+using ExitGames.Client.Photon;
+using Photon.Pun;
+using Photon.Realtime;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class LevelManager : MonoBehaviour
+public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 {
     public static LevelManager Instance { get; private set; }
+
+    private const byte DefeatRequestEvent = 1;
+    private const byte DefeatEvent = 2;
+    private const byte RestartRequestEvent = 3;
+    private const byte ReturnToMenuRequestEvent = 4;
+    private const byte ReturnToMenuEvent = 5;
+    private const byte RestartEvent = 6;
 
     private int totalStars;
     private int collectedStars;
@@ -15,6 +25,7 @@ public class LevelManager : MonoBehaviour
     public Transform player;
 
     private bool levelFinished = false;
+    private bool isLeavingRoom = false;
     public ButtonManager buttonManager;
 
     public GameObject heart1;
@@ -30,7 +41,7 @@ public class LevelManager : MonoBehaviour
 
     private void Start()
     {
-        StarCollectible[] stars = FindObjectsByType<StarCollectible>(FindObjectsSortMode.None);
+        StarCollectible[] stars = FindObjectsByType<StarCollectible>(FindObjectsInactive.Exclude);
         totalStars = stars.Length;
         collectedStars = 0;
 
@@ -76,13 +87,14 @@ public class LevelManager : MonoBehaviour
 
     public void FinishLevel()
     {
-        if (levelFinished)
+        if (levelFinished || !PhotonNetwork.IsMasterClient)
             return;
 
         if (SoundManager.Instance != null)
         {
             SoundManager.Instance.PlayWin();
         }
+
         levelFinished = true;
         StartCoroutine(FinishRoutine());
     }
@@ -90,10 +102,42 @@ public class LevelManager : MonoBehaviour
     private IEnumerator FinishRoutine()
     {
         yield return new WaitForSeconds(0.5f);
-        buttonManager.ShowWinPanel();
+
+        if (SceneManager.GetActiveScene().name == "Level1")
+        {
+            PhotonNetwork.LoadLevel("Level2");
+        }
+        else if (buttonManager != null)
+        {
+            buttonManager.ShowWinPanel();
+        }
     }
 
     public void LoseLevel()
+    {
+        RequestDefeat();
+    }
+
+    public void RequestDefeat()
+    {
+        if (levelFinished)
+            return;
+
+        if (PhotonNetwork.IsMasterClient)
+        {
+            BroadcastDefeat();
+            return;
+        }
+
+        RaiseToMaster(DefeatRequestEvent);
+    }
+
+    private void BroadcastDefeat()
+    {
+        RaiseToAll(DefeatEvent);
+    }
+
+    private void ApplyDefeat()
     {
         if (levelFinished)
             return;
@@ -104,7 +148,157 @@ public class LevelManager : MonoBehaviour
         }
 
         levelFinished = true;
-        buttonManager.ShowLosePanel();
+        SetLocalPlayerControl(false);
+
+        if (buttonManager != null)
+        {
+            buttonManager.ShowLosePanel();
+        }
+    }
+
+    public void RequestRestartLevel()
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            BroadcastRestartCurrentLevel();
+            return;
+        }
+
+        RaiseToMaster(RestartRequestEvent);
+    }
+
+    public void RequestReturnToMenu()
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            BroadcastReturnToMenu();
+            return;
+        }
+
+        RaiseToMaster(ReturnToMenuRequestEvent);
+    }
+
+    public void RestartCurrentLevelAsHost()
+    {
+        BroadcastRestartCurrentLevel();
+    }
+
+    private void BroadcastRestartCurrentLevel()
+    {
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
+        RaiseToAll(RestartEvent, SceneManager.GetActiveScene().name);
+    }
+
+    private void RestartScene(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+            return;
+
+        Time.timeScale = 1f;
+        PhotonNetwork.LoadLevel(sceneName);
+    }
+
+    private void BroadcastReturnToMenu()
+    {
+        RaiseToAll(ReturnToMenuEvent);
+    }
+
+    private void ReturnToMenu()
+    {
+        if (isLeavingRoom)
+            return;
+
+        isLeavingRoom = true;
+        Time.timeScale = 1f;
+
+        if (PhotonNetwork.InRoom)
+        {
+            PhotonNetwork.LeaveRoom();
+        }
+
+        SceneManager.LoadScene("MainMenu");
+    }
+
+    public void SetLocalPlayerControl(bool isEnabled)
+    {
+        if (player == null)
+            return;
+
+        PlayerMovement stormMovement = player.GetComponent<PlayerMovement>();
+        if (stormMovement != null)
+        {
+            stormMovement.enabled = isEnabled;
+        }
+
+        StarfyMovement starfyMovement = player.GetComponent<StarfyMovement>();
+        if (starfyMovement != null)
+        {
+            starfyMovement.enabled = isEnabled;
+        }
+
+        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
+        if (!isEnabled && rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+        }
+    }
+
+    public void OnEvent(EventData photonEvent)
+    {
+        switch (photonEvent.Code)
+        {
+            case DefeatRequestEvent:
+                if (PhotonNetwork.IsMasterClient)
+                    BroadcastDefeat();
+                break;
+
+            case DefeatEvent:
+                ApplyDefeat();
+                break;
+
+            case RestartRequestEvent:
+                if (PhotonNetwork.IsMasterClient)
+                    BroadcastRestartCurrentLevel();
+                break;
+
+            case RestartEvent:
+                RestartScene(photonEvent.CustomData as string);
+                break;
+
+            case ReturnToMenuRequestEvent:
+                if (PhotonNetwork.IsMasterClient)
+                    BroadcastReturnToMenu();
+                break;
+
+            case ReturnToMenuEvent:
+                ReturnToMenu();
+                break;
+        }
+    }
+
+    private void RaiseToMaster(byte eventCode)
+    {
+        PhotonNetwork.RaiseEvent(
+            eventCode,
+            null,
+            new RaiseEventOptions { Receivers = ReceiverGroup.MasterClient },
+            SendOptions.SendReliable);
+    }
+
+    private void RaiseToAll(byte eventCode)
+    {
+        RaiseToAll(eventCode, null);
+    }
+
+    private void RaiseToAll(byte eventCode, object content)
+    {
+        PhotonNetwork.RaiseEvent(
+            eventCode,
+            content,
+            new RaiseEventOptions { Receivers = ReceiverGroup.All },
+            SendOptions.SendReliable);
     }
 
     private int GetCurrentLevelNumber()
@@ -117,11 +311,11 @@ public class LevelManager : MonoBehaviour
         return 1;
     }
 
-
     public int GetScore()
     {
         return collectedStars * 100;
     }
+
     public void SetPlayer(Transform playerTransform)
     {
         player = playerTransform;

@@ -1,6 +1,6 @@
 using Photon.Pun;
+using System.Collections;
 using UnityEngine;
-using ExitGames.Client.Photon;
 
 public class NetworkPlayerSpawner : MonoBehaviour
 {
@@ -20,7 +20,7 @@ public class NetworkPlayerSpawner : MonoBehaviour
             CHAR_KEY,
             out object value))
         {
-            Debug.LogError("Персонаж не выбран!");
+            Debug.LogError("Selected character is missing.");
             return;
         }
 
@@ -34,10 +34,15 @@ public class NetworkPlayerSpawner : MonoBehaviour
             prefabName = "Storm";
             spawnPosition = stormSpawn.position;
         }
-        else
+        else if (characterId == 2)
         {
             prefabName = "Starfy";
             spawnPosition = starfySpawn.position;
+        }
+        else
+        {
+            Debug.LogError("Selected character is invalid.");
+            return;
         }
 
         GameObject player = PhotonNetwork.Instantiate(
@@ -45,9 +50,36 @@ public class NetworkPlayerSpawner : MonoBehaviour
             spawnPosition,
             Quaternion.identity);
 
-        Camera.main.GetComponent<CameraMove>()
-            .SetTarget(player.transform);
+        StartCoroutine(AttachLocalPlayer(player.transform));
+    }
 
-        LevelManager.Instance.SetPlayer(player.transform);
+    private IEnumerator AttachLocalPlayer(Transform playerTransform)
+    {
+        const int maxAttempts = 30;
+
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            if (LevelManager.Instance != null)
+            {
+                LevelManager.Instance.SetPlayer(playerTransform);
+
+                if (LevelManager.Instance.cameraMove != null)
+                {
+                    LevelManager.Instance.cameraMove.SetTarget(playerTransform, true);
+                    yield break;
+                }
+            }
+
+            if (Camera.main != null &&
+                Camera.main.TryGetComponent(out CameraMove cameraMove))
+            {
+                cameraMove.SetTarget(playerTransform, true);
+                yield break;
+            }
+
+            yield return null;
+        }
+
+        Debug.LogWarning("CameraMove was not found for local player.");
     }
 }
