@@ -5,7 +5,7 @@ using UnityEngine;
 public class StarfyMovement : MonoBehaviour
 {
     public float speed = 5f;
-    public float jumpForce = 6f;
+    public float jumpForce = 7f;
 
     public float dashForce = 10f;
     public float dashDuration = 0.35f;

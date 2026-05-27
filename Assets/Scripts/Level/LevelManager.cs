@@ -17,8 +17,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private const byte ReturnToMenuEvent = 5;
     private const byte RestartEvent = 6;
 
-    private int totalStars;
-    private int collectedStars;
+    public int collectedStars;
 
     public ExitDoor exitDoor;
     public CameraMove cameraMove;
@@ -41,8 +40,6 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     private void Start()
     {
-        StarCollectible[] stars = FindObjectsByType<StarCollectible>(FindObjectsInactive.Exclude);
-        totalStars = stars.Length;
         collectedStars = 0;
 
         UpdateDiamondUI();
@@ -57,11 +54,6 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     {
         collectedStars++;
         UpdateDiamondUI();
-
-        if (collectedStars >= totalStars)
-        {
-            StartCoroutine(ShowDoorRoutine(exitDoor.doorPoint));
-        }
     }
 
     public void UpdateHeartsUI(int currentLives)
@@ -76,14 +68,14 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         textCountDiamond.text = "x" + collectedStars.ToString();
     }
 
-    private IEnumerator ShowDoorRoutine(Transform doorPoint)
-    {
-        cameraMove.SetTarget(doorPoint);
-        yield return new WaitForSeconds(1f);
-        exitDoor.OpenDoor();
-        yield return new WaitForSeconds(2f);
-        cameraMove.SetTarget(player);
-    }
+    //private IEnumerator ShowDoorRoutine(Transform doorPoint)
+    //{
+    //    cameraMove.SetTarget(doorPoint);
+    //    yield return new WaitForSeconds(1f);
+    //    exitDoor.OpenDoor();
+    //    yield return new WaitForSeconds(2f);
+    //    cameraMove.SetTarget(player);
+    //}
 
     public void FinishLevel()
     {

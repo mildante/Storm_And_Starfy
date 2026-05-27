@@ -120,4 +120,8 @@ public class ButtonManager : MonoBehaviour
         else
             LevelManager.Instance?.RequestReturnToMenu();
     }
+    public void RestartGame()
+    {
+        PhotonNetwork.LoadLevel("Level1");
+    }
 }
