@@ -1,7 +1,5 @@
-﻿using Photon.Pun;
+using Photon.Pun;
 using Photon.Realtime;
-
-using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,11 +16,11 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
     [SerializeField] private GameObject chooseConnectionPage;
     [SerializeField] private GameObject createRoomPage;
     [SerializeField] private GameObject joinRoomPage;
-
     [SerializeField] private GameObject chooseCharacterPage;
 
     [SerializeField] private TMP_InputField joinCodeInput;
     [SerializeField] private TMP_Text roomCodeText;
+    [SerializeField] private TMP_Text networkStatusText;
 
     [SerializeField] private TMP_Text hostPlayer1Text;
     [SerializeField] private TMP_Text hostPlayer2Text;
@@ -32,7 +30,7 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
     [SerializeField] private TMP_Text player1NameText;
     [SerializeField] private TMP_Text player2NameText;
 
-    [SerializeField] private Button stormButton; 
+    [SerializeField] private Button stormButton;
     [SerializeField] private Button starfyButton;
 
     [SerializeField] private Image stormImage;
@@ -49,27 +47,36 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
     [SerializeField] private TMP_Text stormPlayerNameText;
     [SerializeField] private TMP_Text starfyPlayerNameText;
 
+    [SerializeField] private Button openCharacterSelectionButton;
     [SerializeField] private Button readyButton;
     [SerializeField] private Button startGameButton;
 
-    private Vector3 normalScale = Vector3.one;
-    private Vector3 selectedScale = new Vector3(1.15f, 1.15f, 1f);
+    private readonly Vector3 normalScale = Vector3.one;
+    private readonly Vector3 selectedScale = new Vector3(1.15f, 1.15f, 1f);
 
-    private const string CHAR_KEY = "SelectedChar";
-    private const string READY_KEY = "IsReady";
+    private const string CharacterKey = "SelectedChar";
+    private const string LevelName = "Level1";
+
+    private bool isRoomRequestInProgress;
+    private bool isSceneTransitionInProgress;
+    private bool isReturningToConnectionPage;
+    private bool joinedRoomAsHost;
 
     private void Start()
     {
         PlayerSession.LoadSession();
 
         Time.timeScale = 1f;
-
         PhotonNetwork.AutomaticallySyncScene = true;
 
         if (SoundManager.Instance != null)
         {
             SoundManager.Instance.PlayMenuMusic();
         }
+
+        HideDeprecatedReadyButton();
+        ResetRoomState();
+        ResetCharacterVisuals();
 
         if (PlayerSession.IsAuthorized)
         {
@@ -79,23 +86,23 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
         {
             ShowLogin();
         }
-
-        if (startGameButton != null)
-            startGameButton.interactable = false;
-
-        stormImage.sprite = stormRedSprite;
     }
+
     private void ConnectToPhoton()
     {
-        if (!PhotonNetwork.IsConnected)
-        {
-            string pName = !string.IsNullOrEmpty(PlayerSession.Name) ? PlayerSession.Name : "Player_" + Random.Range(10, 99);
-            PhotonNetwork.NickName = pName;
-            PhotonNetwork.ConnectUsingSettings();
-        }
+        if (PhotonNetwork.IsConnected || PhotonNetwork.NetworkClientState == ClientState.ConnectingToNameServer)
+            return;
+
+        string playerName = !string.IsNullOrEmpty(PlayerSession.Name)
+            ? PlayerSession.Name
+            : "Player_" + Random.Range(10, 99);
+
+        PhotonNetwork.NickName = playerName;
+        SetStatus("Подключение к Photon...");
+        PhotonNetwork.ConnectUsingSettings();
     }
 
-    private IEnumerator ValidateSavedSession()
+    private System.Collections.IEnumerator ValidateSavedSession()
     {
         yield return ApiManager.Instance.GetRequest(
             ApiRoutes.Me,
@@ -133,29 +140,31 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
     private void HideAllPages()
     {
-        if (mainMenuPage != null) mainMenuPage.SetActive(false);
-        if (settingsPage != null) settingsPage.SetActive(false);
-        if (registerPage != null) registerPage.SetActive(false);
-        if (loginPage != null) loginPage.SetActive(false);
-        if (chooseConnectionPage != null) chooseConnectionPage.SetActive(false);
-        if (createRoomPage != null) createRoomPage.SetActive(false);
-        if (joinRoomPage != null) joinRoomPage.SetActive(false);
+        SetActive(mainMenuPage, false);
+        SetActive(settingsPage, false);
+        SetActive(registerPage, false);
+        SetActive(loginPage, false);
+        SetActive(chooseConnectionPage, false);
+        SetActive(createRoomPage, false);
+        SetActive(joinRoomPage, false);
+        SetActive(chooseCharacterPage, false);
     }
 
     public void ShowMainMenu()
     {
         HideAllPages();
-        mainMenuPage.SetActive(true);
+        SetActive(mainMenuPage, true);
     }
 
     public void ShowSettings()
     {
         HideAllPages();
-        settingsPage.SetActive(true);
+        SetActive(settingsPage, true);
     }
 
     public void OnAuthenticated()
     {
+        SetStatus("");
         ShowMainMenu();
 
         if (!string.IsNullOrEmpty(PlayerSession.Name))
@@ -168,44 +177,77 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
     public void ShowConnectionSelection()
     {
-        if (PhotonNetwork.InLobby)
+        HideAllPages();
+        SetActive(chooseConnectionPage, true);
+
+        if (PhotonNetwork.IsConnectedAndReady)
         {
-            HideAllPages();
-            chooseConnectionPage.SetActive(true);
+            if (!PhotonNetwork.InLobby)
+            {
+                PhotonNetwork.JoinLobby();
+            }
+
+            SetStatus("Photon подключен");
+            return;
         }
-        else
-        {
-            Debug.LogWarning("Photon еще не подключился к лобби, подождите...");
-            ConnectToPhoton();
-        }
+
+        SetStatus("Подключение к Photon...");
+        ConnectToPhoton();
     }
 
     public void ShowCreateRoomPage()
     {
         HideAllPages();
-        createRoomPage.SetActive(true);
+        SetActive(createRoomPage, true);
+
+        if (PhotonNetwork.InRoom)
+        {
+            UpdateRoomPlayersUI();
+            UpdateOpenCharacterSelectionButtonState();
+        }
+        else
+        {
+            ClearRoomPlayersUI();
+            UpdateOpenCharacterSelectionButtonState();
+        }
     }
+
     public void ShowJoinRoomPage()
     {
         HideAllPages();
-        if (joinRoomPage != null) joinRoomPage.SetActive(true);
+        SetActive(joinRoomPage, true);
+
+        if (PhotonNetwork.InRoom)
+        {
+            UpdateRoomPlayersUI();
+        }
+        else
+        {
+            ClearRoomPlayersUI();
+        }
     }
 
     public void ShowRegister()
     {
         HideAllPages();
-        registerPage.SetActive(true);
+        SetActive(registerPage, true);
     }
 
     public void ShowLogin()
     {
         HideAllPages();
-        loginPage.SetActive(true);
+        SetActive(loginPage, true);
     }
 
     public void Logout()
     {
+        if (PhotonNetwork.InRoom)
+        {
+            PhotonNetwork.LeaveRoom();
+        }
+
         PlayerSession.Clear();
+        SetStatus("");
         ShowLogin();
     }
 
@@ -217,12 +259,22 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
         }
     }
 
-
     public void CreatePhotonRoom()
     {
-        string code = GenerateRoomCode(6);
+        if (isRoomRequestInProgress || PhotonNetwork.InRoom)
+            return;
 
-        roomCodeText.text = code;
+        if (!PhotonNetwork.IsConnectedAndReady)
+        {
+            SetStatus("Подключение к Photon...");
+            ConnectToPhoton();
+            return;
+        }
+
+        isRoomRequestInProgress = true;
+        string code = GenerateRoomCode(6);
+        SetRoomCode(code);
+        SetStatus("Создание комнаты...");
 
         RoomOptions roomOptions = new RoomOptions
         {
@@ -233,265 +285,422 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
 
         PhotonNetwork.CreateRoom(code, roomOptions);
     }
-    private string GenerateRoomCode(int length = 6)
+
+    private string GenerateRoomCode(int length)
     {
         string code = "";
         for (int i = 0; i < length; i++)
         {
             code += Random.Range(0, 10).ToString();
         }
+
         return code;
     }
+
     public void JoinPhotonRoomByCode()
     {
-        if (joinCodeInput == null) return;
+        bool hasJoinCodeInput = joinCodeInput != null;
+        if (isRoomRequestInProgress || PhotonNetwork.InRoom || !hasJoinCodeInput)
+            return;
 
         string codeToJoin = joinCodeInput.text.Trim();
-        if (!string.IsNullOrEmpty(codeToJoin))
+        bool isRoomCodeValid = IsValidRoomCode(codeToJoin);
+        if (!isRoomCodeValid)
         {
-            PhotonNetwork.JoinRoom(codeToJoin);
+            SetStatus("Введите 6-значный код комнаты");
+            return;
         }
+
+        if (!PhotonNetwork.IsConnectedAndReady)
+        {
+            SetStatus("Подключение к Photon...");
+            ConnectToPhoton();
+            return;
+        }
+
+        if (!CanStartJoinRoomRequest(
+            isRoomRequestInProgress,
+            PhotonNetwork.InRoom,
+            hasJoinCodeInput,
+            isRoomCodeValid,
+            PhotonNetwork.IsConnectedAndReady))
+        {
+            return;
+        }
+
+        isRoomRequestInProgress = true;
+        SetStatus("Вход в комнату...");
+        PhotonNetwork.JoinRoom(codeToJoin);
     }
+
+    private static bool CanStartJoinRoomRequest(
+        bool isRequestInProgress,
+        bool isInRoom,
+        bool hasJoinCodeInput,
+        bool isRoomCodeValid,
+        bool isConnectedAndReady)
+    {
+        return !isRequestInProgress &&
+            !isInRoom &&
+            hasJoinCodeInput &&
+            isRoomCodeValid &&
+            isConnectedAndReady;
+    }
+
+    private bool IsValidRoomCode(string code)
+    {
+        if (string.IsNullOrEmpty(code) || code.Length != 6)
+            return false;
+
+        for (int i = 0; i < code.Length; i++)
+        {
+            if (!char.IsDigit(code[i]))
+                return false;
+        }
+
+        return true;
+    }
+
     public void BackFromNetwork()
     {
         if (PhotonNetwork.InRoom)
         {
+            isReturningToConnectionPage = true;
+            ClearRoomPlayersUI();
+            SetStatus("Выход из комнаты...");
             PhotonNetwork.LeaveRoom();
+            return;
         }
+
+        ResetRoomState();
         ShowConnectionSelection();
     }
 
     public override void OnConnectedToMaster()
     {
         Debug.Log("Photon: подключено к мастер-серверу.");
+        SetStatus("Photon подключен");
         PhotonNetwork.JoinLobby();
     }
 
     public override void OnJoinedLobby()
     {
-        Debug.Log("Photon: успешно вошли в лобби. Сеть готова.");
+        Debug.Log("Photon: успешно вошли в лобби.");
+        SetStatus("Photon подключен");
+    }
+
+    public override void OnDisconnected(DisconnectCause cause)
+    {
+        isRoomRequestInProgress = false;
+        isSceneTransitionInProgress = false;
+        ResetRoomState();
+        SetStatus("Соединение потеряно");
+
+        if (PlayerSession.IsAuthorized)
+        {
+            ShowMainMenu();
+        }
+        else
+        {
+            ShowLogin();
+        }
     }
 
     public override void OnJoinedRoom()
     {
-        Hashtable props = new Hashtable
-        {
-            { CHAR_KEY, 0 },
-            { READY_KEY, false }
-        };
+        isRoomRequestInProgress = false;
+        isReturningToConnectionPage = false;
+        joinedRoomAsHost = PhotonNetwork.IsMasterClient;
 
-        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+        PhotonNetwork.LocalPlayer.SetCustomProperties(new Hashtable
+        {
+            { CharacterKey, 0 }
+        });
 
         Debug.Log($"Photon: вы вошли в комнату {PhotonNetwork.CurrentRoom.Name}");
+        SetRoomCode(PhotonNetwork.CurrentRoom.Name);
+        SetStatus(PhotonNetwork.IsMasterClient
+            ? "..."
+            : "Комната найдена");
 
         if (PhotonNetwork.IsMasterClient)
         {
             ShowCreateRoomPage();
-            if (readyButton != null)
-            {
-                readyButton.interactable = false;
-            }
         }
         else
         {
             ShowJoinRoomPage();
-            if (readyButton != null)
-            {
-                readyButton.gameObject.SetActive(true);
-                readyButton.interactable = true;
-            }
         }
-
-        UpdateRoomPlayersUI();
     }
 
-    public override void OnPlayerEnteredRoom(Player newPlayer)
+    public override void OnLeftRoom()
     {
-        UpdateRoomPlayersUI();
-        UpdateLobbyStartButtonState();
+        ResetRoomState();
+
+        if (isReturningToConnectionPage)
+        {
+            isReturningToConnectionPage = false;
+            ShowConnectionSelection();
+        }
     }
 
-    public override void OnPlayerLeftRoom(Player otherPlayer)
+    public override void OnCreateRoomFailed(short returnCode, string message)
     {
-        UpdateRoomPlayersUI();
-        UpdateLobbyStartButtonState();
+        isRoomRequestInProgress = false;
+        SetRoomCode("");
+        SetStatus("Не удалось создать комнату: " + message);
+        ShowCreateRoomPage();
     }
 
     public override void OnJoinRoomFailed(short returnCode, string message)
     {
-        Debug.LogError($"Photon: ошибка входа в комнату: {message}");
+        isRoomRequestInProgress = false;
+        SetStatus("Комната не найдена");
+        ShowJoinRoomPage();
     }
 
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        SetStatus("Оба игрока в комнате");
+        UpdateRoomPlayersUI();
+        UpdateOpenCharacterSelectionButtonState();
+    }
+
+    public override void OnPlayerLeftRoom(Player otherPlayer)
+    {
+        if (!joinedRoomAsHost)
+        {
+            LeaveRoomAfterHostDisconnects();
+            return;
+        }
+
+        ClearLocalCharacterSelection();
+        SetStatus("...");
+
+        if (chooseCharacterPage != null && chooseCharacterPage.activeSelf)
+        {
+            ShowCreateRoomPage();
+        }
+
+        UpdateRoomPlayersUI();
+        UpdateOpenCharacterSelectionButtonState();
+    }
+
+    public override void OnMasterClientSwitched(Player newMasterClient)
+    {
+        if (!joinedRoomAsHost)
+        {
+            LeaveRoomAfterHostDisconnects();
+        }
+    }
+
+    private void LeaveRoomAfterHostDisconnects()
+    {
+        SetStatus("Соединение потеряно");
+        isReturningToConnectionPage = true;
+
+        if (PhotonNetwork.InRoom)
+        {
+            PhotonNetwork.LeaveRoom();
+        }
+        else
+        {
+            ShowConnectionSelection();
+        }
+    }
 
     private void UpdateRoomPlayersUI()
     {
-        string p1 = "...";
-        string p2 = "...";
+        Player[] players = PhotonNetwork.InRoom ? PhotonNetwork.PlayerList : new Player[0];
 
-        Player[] players = PhotonNetwork.PlayerList;
+        SetRoomPlayersVisible(PhotonNetwork.InRoom);
 
-        if (players.Length > 0)
-            p1 = players[0].NickName;
+        string firstPlayerName = players.Length > 0 ? players[0].NickName : "...";
+        string secondPlayerName = players.Length > 1 ? players[1].NickName : "...";
 
-        if (players.Length > 1)
-            p2 = players[1].NickName;
-
-        hostPlayer1Text.text = p1;
-        hostPlayer2Text.text = p2;
-
-        guestPlayer1Text.text = p1;
-        guestPlayer2Text.text = p2;
+        SetText(hostPlayer1Text, firstPlayerName);
+        SetText(hostPlayer2Text, secondPlayerName);
+        SetText(guestPlayer1Text, firstPlayerName);
+        SetText(guestPlayer2Text, secondPlayerName);
 
         UpdateCharacterButtonsState();
     }
 
-    public void SelectCharacter1() { SetCharacterProperty(1); }
-    public void SelectCharacter2() { SetCharacterProperty(2); }
+    public void SelectCharacter1()
+    {
+        SetCharacterProperty(1);
+    }
+
+    public void SelectCharacter2()
+    {
+        SetCharacterProperty(2);
+    }
 
     private void SetCharacterProperty(int characterId)
     {
-        int currentSelection = -1;
+        if (!PhotonNetwork.InRoom || IsCharacterTakenByOtherPlayer(characterId))
+            return;
 
-        if (PhotonNetwork.LocalPlayer.CustomProperties.TryGetValue(
-            CHAR_KEY,
-            out object value))
+        int currentSelection = GetSelectedCharacter(PhotonNetwork.LocalPlayer);
+        int nextSelection = currentSelection == characterId ? 0 : characterId;
+
+        PhotonNetwork.LocalPlayer.SetCustomProperties(new Hashtable
         {
-            currentSelection = (int)value;
-        }
-
-        Hashtable props = new Hashtable();
-
-        if (currentSelection == characterId)
-        {
-            props[CHAR_KEY] = 0;
-        }
-        else
-        {
-            props[CHAR_KEY] = characterId;
-        }
-
-        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
+            { CharacterKey, nextSelection }
+        });
     }
 
     public override void OnPlayerPropertiesUpdate(Player targetPlayer, Hashtable changedProps)
     {
-        if (changedProps.ContainsKey(CHAR_KEY))
+        if (changedProps.ContainsKey(CharacterKey))
         {
             UpdateCharacterButtonsState();
-        }
-
-        if (changedProps.ContainsKey(READY_KEY))
-        {
-            UpdateLobbyStartButtonState();
         }
     }
 
     private void UpdateCharacterButtonsState()
     {
-        stormButton.interactable = true;
-        starfyButton.interactable = true;
+        ResetCharacterVisuals();
 
-        stormImage.sprite = stormDefaultSprite;
-        starfyImage.sprite = starfyDefaultSprite;
-
-        stormButton.transform.localScale = normalScale;
-        starfyButton.transform.localScale = normalScale;
-
-        stormPlayerNameText.text = "";
-        starfyPlayerNameText.text = "";
+        if (!PhotonNetwork.InRoom)
+            return;
 
         foreach (Player player in PhotonNetwork.PlayerList)
         {
-            if (!player.CustomProperties.TryGetValue(
-                CHAR_KEY,
-                out object value)) 
+            int selectedCharacter = GetSelectedCharacter(player);
+            if (selectedCharacter == 0)
                 continue;
 
-            int selectedCharacter = (int)value;
-
             bool isHost = player.IsMasterClient;
+            bool isLocalPlayer = player == PhotonNetwork.LocalPlayer;
 
             if (selectedCharacter == 1)
             {
-                stormPlayerNameText.text = player.NickName;
+                SetText(stormPlayerNameText, player.NickName);
+                if (stormImage != null)
+                {
+                    stormImage.sprite = isHost ? stormRedSprite : stormBlueSprite;
+                }
 
-                Debug.Log("Changing Storm sprite");
-
-                stormImage.sprite =
-                    isHost ?
-                    stormRedSprite :
-                    stormBlueSprite;
-
-                stormButton.transform.localScale =
-                    selectedScale;
-
-                if (player != PhotonNetwork.LocalPlayer)
-                    stormButton.interactable = false;
+                if (stormButton != null)
+                {
+                    stormButton.transform.localScale = selectedScale;
+                    stormButton.interactable = isLocalPlayer;
+                }
             }
 
             if (selectedCharacter == 2)
             {
-                starfyPlayerNameText.text = player.NickName;
+                SetText(starfyPlayerNameText, player.NickName);
+                if (starfyImage != null)
+                {
+                    starfyImage.sprite = isHost ? starfyRedSprite : starfyBlueSprite;
+                }
 
-                starfyImage.sprite =
-                    isHost ?
-                    starfyRedSprite :
-                    starfyBlueSprite;
-
-                starfyButton.transform.localScale =
-                    selectedScale;
-
-                if (player != PhotonNetwork.LocalPlayer)
-                    starfyButton.interactable = false;
+                if (starfyButton != null)
+                {
+                    starfyButton.transform.localScale = selectedScale;
+                    starfyButton.interactable = isLocalPlayer;
+                }
             }
         }
 
-        UpdateLobbyStartButtonState();
-    } 
+        SetText(player1NameText, GetPlayerName(0));
+        SetText(player2NameText, GetPlayerName(1));
+        UpdateStartGameButtonState();
+    }
 
-    private void UpdateLobbyStartButtonState()
+    private void ResetCharacterVisuals()
+    {
+        if (stormButton != null)
+        {
+            stormButton.interactable = true;
+            stormButton.transform.localScale = normalScale;
+        }
+
+        if (starfyButton != null)
+        {
+            starfyButton.interactable = true;
+            starfyButton.transform.localScale = normalScale;
+        }
+
+        if (stormImage != null)
+        {
+            stormImage.sprite = stormDefaultSprite;
+        }
+
+        if (starfyImage != null)
+        {
+            starfyImage.sprite = starfyDefaultSprite;
+        }
+
+        SetText(stormPlayerNameText, "");
+        SetText(starfyPlayerNameText, "");
+        UpdateStartGameButtonState();
+    }
+
+    private void UpdateOpenCharacterSelectionButtonState()
+    {
+        if (openCharacterSelectionButton == null)
+            return;
+
+        bool canOpen = PhotonNetwork.InRoom &&
+            PhotonNetwork.IsMasterClient &&
+            PhotonNetwork.PlayerList.Length == 2 &&
+            !isSceneTransitionInProgress;
+
+        openCharacterSelectionButton.gameObject.SetActive(PhotonNetwork.IsMasterClient);
+        openCharacterSelectionButton.interactable = canOpen;
+    }
+
+    private void UpdateStartGameButtonState()
     {
         if (startGameButton == null)
             return;
 
-        startGameButton.interactable = false;
+        bool characterPageIsOpen = chooseCharacterPage != null && chooseCharacterPage.activeSelf;
+        bool isHost = characterPageIsOpen && PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient;
 
-        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.PlayerList.Length != 2)
-            return;
+        startGameButton.gameObject.SetActive(isHost);
+        startGameButton.interactable = CanStartGameWithSelectedCharacters() && !isSceneTransitionInProgress;
 
-        foreach (Player player in PhotonNetwork.PlayerList)
+        if (isHost && PhotonNetwork.PlayerList.Length == 2 && !startGameButton.interactable)
         {
-            if (player.IsMasterClient)
-                continue;
-
-            if (player.CustomProperties.TryGetValue(READY_KEY, out object readyObj) &&
-                readyObj is bool isReady)
-            {
-                startGameButton.interactable = isReady;
-            }
-
-            return;
+            SetStatus("Выберите разных персонажей");
         }
     }
 
     private bool CanStartGameWithSelectedCharacters()
     {
-        if (!PhotonNetwork.IsMasterClient || PhotonNetwork.PlayerList.Length != 2)
+        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient || PhotonNetwork.PlayerList.Length != 2)
             return false;
 
         int firstSelection = GetSelectedCharacter(PhotonNetwork.PlayerList[0]);
         int secondSelection = GetSelectedCharacter(PhotonNetwork.PlayerList[1]);
 
-        return
-            firstSelection != 0 &&
+        return firstSelection != 0 &&
             secondSelection != 0 &&
             firstSelection != secondSelection;
+    }
+
+    private bool IsCharacterTakenByOtherPlayer(int characterId)
+    {
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            if (player == PhotonNetwork.LocalPlayer)
+                continue;
+
+            if (GetSelectedCharacter(player) == characterId)
+                return true;
+        }
+
+        return false;
     }
 
     private int GetSelectedCharacter(Player player)
     {
         if (player != null &&
-            player.CustomProperties.TryGetValue(CHAR_KEY, out object value) &&
+            player.CustomProperties.TryGetValue(CharacterKey, out object value) &&
             value is int selectedCharacter)
         {
             return selectedCharacter;
@@ -500,22 +709,23 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
         return 0;
     }
 
-    public void Ready()
+    private string GetPlayerName(int index)
     {
-        if (PhotonNetwork.IsMasterClient)
+        if (!PhotonNetwork.InRoom || PhotonNetwork.PlayerList.Length <= index)
+            return "";
+
+        return PhotonNetwork.PlayerList[index].NickName;
+    }
+
+    private void ClearLocalCharacterSelection()
+    {
+        if (!PhotonNetwork.InRoom || PhotonNetwork.LocalPlayer == null)
             return;
 
-        Hashtable props = new Hashtable
+        PhotonNetwork.LocalPlayer.SetCustomProperties(new Hashtable
         {
-            { READY_KEY, true }
-        };
-
-        PhotonNetwork.LocalPlayer.SetCustomProperties(props);
-
-        if (readyButton != null)
-        {
-            readyButton.interactable = false;
-        }
+            { CharacterKey, 0 }
+        });
     }
 
     public void StartGame()
@@ -523,27 +733,118 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
         if (!CanStartGameWithSelectedCharacters())
             return;
 
-        PhotonNetwork.LoadLevel("Level1");
+        isSceneTransitionInProgress = true;
+        if (startGameButton != null)
+        {
+            startGameButton.interactable = false;
+        }
+
+        if (PhotonNetwork.CurrentRoom != null)
+        {
+            PhotonNetwork.CurrentRoom.IsOpen = false;
+            PhotonNetwork.CurrentRoom.IsVisible = false;
+        }
+
+        PhotonNetwork.LoadLevel(LevelName);
     }
-    
+
     public void OpenCharacterSelection()
     {
-        if (!PhotonNetwork.IsMasterClient)
+        if (!PhotonNetwork.InRoom || !PhotonNetwork.IsMasterClient || PhotonNetwork.PlayerList.Length != 2)
+        {
+            UpdateOpenCharacterSelectionButtonState();
             return;
+        }
 
-        UpdateLobbyStartButtonState();
+        isSceneTransitionInProgress = true;
+        UpdateOpenCharacterSelectionButtonState();
 
-        if (startGameButton != null && !startGameButton.interactable)
-            return;
-
-        photonView.RPC(nameof(RPC_OpenCharacterSelection),
-            RpcTarget.All);
+        photonView.RPC(nameof(RPC_OpenCharacterSelection), RpcTarget.All);
     }
 
-    [PunRPC] 
+    [PunRPC]
     private void RPC_OpenCharacterSelection()
     {
-        chooseCharacterPage.SetActive(true);
+        isSceneTransitionInProgress = false;
+        HideAllPages();
+        SetActive(chooseCharacterPage, true);
+        SetStatus("Выберите разных персонажей");
         UpdateCharacterButtonsState();
+    }
+
+    private void ResetRoomState()
+    {
+        joinedRoomAsHost = false;
+        isRoomRequestInProgress = false;
+        isSceneTransitionInProgress = false;
+        SetRoomCode("");
+        ClearRoomPlayersUI();
+        UpdateOpenCharacterSelectionButtonState();
+        UpdateStartGameButtonState();
+    }
+
+    private void ClearRoomPlayersUI()
+    {
+        SetText(hostPlayer1Text, "");
+        SetText(hostPlayer2Text, "");
+        SetText(guestPlayer1Text, "");
+        SetText(guestPlayer2Text, "");
+        SetText(player1NameText, "");
+        SetText(player2NameText, "");
+        SetRoomPlayersVisible(false);
+    }
+
+    private void SetRoomPlayersVisible(bool visible)
+    {
+        SetTextParentActive(hostPlayer1Text, visible);
+        SetTextParentActive(guestPlayer1Text, visible);
+    }
+
+    private void SetTextParentActive(TMP_Text text, bool active)
+    {
+        if (text != null && text.transform.parent != null)
+        {
+            text.transform.parent.gameObject.SetActive(active);
+        }
+    }
+
+    private void HideDeprecatedReadyButton()
+    {
+        if (readyButton != null)
+        {
+            readyButton.gameObject.SetActive(false);
+            readyButton.interactable = false;
+        }
+    }
+
+    private void SetStatus(string message)
+    {
+        SetText(networkStatusText, message);
+
+        if (!string.IsNullOrEmpty(message))
+        {
+            Debug.Log(message);
+        }
+    }
+
+    private void SetRoomCode(string code)
+    {
+        SetText(roomCodeText, string.IsNullOrEmpty(code) ? "" : code);
+    }
+
+    private void SetText(TMP_Text text, string value)
+    {
+        if (text != null)
+        {
+            text.text = value;
+        }
+    }
+
+    private void SetActive(GameObject target, bool active)
+    {
+        if (target != null)
+        {
+            target.SetActive(active);
+        }
     }
 }

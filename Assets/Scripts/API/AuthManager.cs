@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class AuthManager : MonoBehaviour
 {
@@ -15,22 +16,29 @@ public class AuthManager : MonoBehaviour
 
     [SerializeField] private TMP_Text messageText;
     [SerializeField] private MainMenuManager menuManager;
+    [SerializeField] private Button loginButton;
+    [SerializeField] private Button registerButton;
+
+    private bool isRequestInProgress;
 
     private void Awake()
     {
-        if (Instance == null)
+        Instance = this;
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
+            Instance = null;
         }
     }
 
     public void OnLoginClicked()
     {
+        if (isRequestInProgress)
+            return;
+
         string login = loginInput.text.Trim();
         string password = passwordInput.text;
 
@@ -51,6 +59,9 @@ public class AuthManager : MonoBehaviour
 
     public void OnRegisterClicked()
     {
+        if (isRequestInProgress)
+            return;
+
         string login = registerLoginInput.text.Trim();
         string password = registerPasswordInput.text;
         string name = registerNameInput.text.Trim();
@@ -78,6 +89,8 @@ public class AuthManager : MonoBehaviour
 
     private IEnumerator LoginCoroutine(string login, string password)
     {
+        SetBusy(true);
+
         LoginRequest request = new LoginRequest
         {
             login = login,
@@ -90,10 +103,14 @@ public class AuthManager : MonoBehaviour
             OnLoginSuccess,
             OnRequestError
         );
+
+        SetBusy(false);
     }
 
     private IEnumerator RegisterCoroutine(string login, string password, string name)
     {
+        SetBusy(true);
+
         RegisterRequest request = new RegisterRequest
         {
             login = login,
@@ -107,6 +124,8 @@ public class AuthManager : MonoBehaviour
             OnRegisterSuccess,
             OnRequestError
         );
+
+        SetBusy(false);
     }
 
     private void OnLoginSuccess(string responseJson)
@@ -135,7 +154,10 @@ public class AuthManager : MonoBehaviour
             );
 
             SetMessage("");
-            menuManager.OnAuthenticated();
+            if (menuManager != null)
+            {
+                menuManager.OnAuthenticated();
+            }
         }
         else
         {
@@ -152,8 +174,40 @@ public class AuthManager : MonoBehaviour
             : "Ошибка запроса к серверу");
     }
 
+    private void SetBusy(bool busy)
+    {
+        isRequestInProgress = busy;
+
+        if (loginButton != null)
+        {
+            loginButton.interactable = !busy;
+        }
+
+        if (registerButton != null)
+        {
+            registerButton.interactable = !busy;
+        }
+
+        SetInputEnabled(loginInput, !busy);
+        SetInputEnabled(passwordInput, !busy);
+        SetInputEnabled(registerLoginInput, !busy);
+        SetInputEnabled(registerPasswordInput, !busy);
+        SetInputEnabled(registerNameInput, !busy);
+    }
+
+    private void SetInputEnabled(TMP_InputField input, bool enabled)
+    {
+        if (input != null)
+        {
+            input.interactable = enabled;
+        }
+    }
+
     private void SetMessage(string text)
     {
-        messageText.text = text;
+        if (messageText != null)
+        {
+            messageText.text = text;
+        }
     }
 }
