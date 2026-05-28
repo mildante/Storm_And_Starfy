@@ -3676,10 +3676,6 @@ MonoBehaviour:
   winSound: {fileID: 8300000, guid: 86d0fab4e5d87de4e9f49f7e0423e391, type: 3}
   loseSound: {fileID: 8300000, guid: b747f3029599ddb4894dcba596c15561, type: 3}
   buttonSound: {fileID: 8300000, guid: ac1b4679055fdbe4eba2d805b6753daa, type: 3}
-  dashSound: {fileID: 8300000, guid: 8b1e3c5d7f90123456789abcdef01234, type: 3}
-  attackSound: {fileID: 8300000, guid: 7a0f2b1c3d4e5f67890123456789abcd, type: 3}
-  leverSound: {fileID: 8300000, guid: 9c2f4e6a80123456789abcdef0123456, type: 3}
-  pauseSound: {fileID: 8300000, guid: 01ae68e6c8b97324196bf5de933eeaf8, type: 3}
 --- !u!4 &350309532
 Transform:
   m_ObjectHideFlags: 0
