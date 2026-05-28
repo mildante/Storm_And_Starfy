@@ -1,7 +1,6 @@
 using System.Collections;
-using System.Net;
+using Photon.Pun;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class EnemyKingPig : MonoBehaviour
 {
@@ -12,16 +11,19 @@ public class EnemyKingPig : MonoBehaviour
     private Animator animator;
     private bool isDead;
     private Collider2D enemyCollider;
+    private PhotonView photonView;
 
     private void Awake()
     {
         sr = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         enemyCollider = GetComponent<Collider2D>();
+        photonView = GetComponent<PhotonView>();
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
+        if (isDead) return;
 
         if (!collision.collider.CompareTag("Storm") && !collision.collider.CompareTag("Starfy")) return;
         PlayerHealth playerHealth = collision.collider.GetComponent<PlayerHealth>();
@@ -31,8 +33,32 @@ public class EnemyKingPig : MonoBehaviour
             playerHealth.TakeDamage();
         }
     }
+
+    public void RequestDie()
+    {
+        if (isDead)
+            return;
+
+        if (PhotonNetwork.InRoom && photonView != null && photonView.ViewID != 0)
+        {
+            photonView.RPC(nameof(DieRPC), RpcTarget.All);
+            return;
+        }
+
+        Die();
+    }
+
+    [PunRPC]
+    private void DieRPC()
+    {
+        Die();
+    }
+
     public void Die()
     {
+        if (isDead)
+            return;
+
         isDead = true;
 
         enemyCollider.enabled = false;

@@ -3,11 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 
-public class WheelCheckpoint : MonoBehaviourPun
+public class ShipHelmCheckpoint : MonoBehaviourPun
 {
     [SerializeField] private GameObject[] comments;
-
-    [SerializeField] private GameObject finishPanel;
 
     [SerializeField] private float dialogueDelay = 6.3f;
 
@@ -21,7 +19,6 @@ public class WheelCheckpoint : MonoBehaviourPun
             comment.SetActive(false);
         }
 
-        finishPanel.SetActive(false);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -67,7 +64,7 @@ public class WheelCheckpoint : MonoBehaviourPun
             yield return new WaitForSeconds(dialogueDelay);
         }
 
-        finishPanel.SetActive(true);
+        LevelManager.Instance?.FinishLevel();
     }
 
     private void DisablePlayers()
@@ -89,6 +86,11 @@ public class WheelCheckpoint : MonoBehaviourPun
         if (movement == null)
         {
             movement = player.GetComponent<StarfyMovement>();
+        }
+
+        if (movement != null)
+        {
+            movement.enabled = false;
         }
 
         Rigidbody2D rb = player.GetComponent<Rigidbody2D>();

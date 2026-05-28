@@ -1,17 +1,23 @@
-using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class WaterDamage : MonoBehaviour
 {
     [SerializeField] private float damageDelay = 5f;
 
-    private Coroutine damageCoroutine;
+    private readonly Dictionary<GameObject, Coroutine> damageCoroutines =
+        new Dictionary<GameObject, Coroutine>();
 
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Storm") || other.CompareTag("Starfy"))
         {
-            damageCoroutine = StartCoroutine(DamageAfterDelay(other.gameObject));
+            if (!damageCoroutines.ContainsKey(other.gameObject))
+            {
+                damageCoroutines[other.gameObject] =
+                    StartCoroutine(DamageAfterDelay(other.gameObject));
+            }
         }
     }
 
@@ -19,12 +25,25 @@ public class WaterDamage : MonoBehaviour
     {
         if (other.CompareTag("Storm") || other.CompareTag("Starfy"))
         {
+            if (damageCoroutines.TryGetValue(other.gameObject, out Coroutine damageCoroutine))
+            {
+                StopCoroutine(damageCoroutine);
+                damageCoroutines.Remove(other.gameObject);
+            }
+        }
+    }
+
+    private void OnDisable()
+    {
+        foreach (Coroutine damageCoroutine in damageCoroutines.Values)
+        {
             if (damageCoroutine != null)
             {
                 StopCoroutine(damageCoroutine);
-                damageCoroutine = null;
             }
         }
+
+        damageCoroutines.Clear();
     }
 
     private IEnumerator DamageAfterDelay(GameObject player)
@@ -37,5 +56,7 @@ public class WaterDamage : MonoBehaviour
         {
             health.TakeDamage();
         }
+
+        damageCoroutines.Remove(player);
     }
 }

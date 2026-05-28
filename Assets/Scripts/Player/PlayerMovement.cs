@@ -32,7 +32,7 @@ public class PlayerMovement : MonoBehaviour
     }
     private void Update()
     {
-        if (!photonView.IsMine)
+        if (photonView != null && !photonView.IsMine)
             return;
 
         Move();
@@ -105,14 +105,14 @@ public class PlayerMovement : MonoBehaviour
 
             if (pig != null)
             {
-                pig.Die();
+                pig.RequestDie();
             }
 
             EnemyKingPig kingPig = enemy.GetComponent<EnemyKingPig>();
 
             if (kingPig != null)
             {
-                kingPig.Die();
+                kingPig.RequestDie();
             }
         }
 

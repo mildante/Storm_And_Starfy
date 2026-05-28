@@ -1,6 +1,7 @@
+using Photon.Pun;
 using UnityEngine;
 
-public class MovingLever : MonoBehaviour
+public class MovingLever : MonoBehaviourPun
 {
     public MovingPlatform platform;
 
@@ -17,11 +18,23 @@ public class MovingLever : MonoBehaviour
     {
         if (playerNear && Input.GetKeyDown(KeyCode.E))
         {
-            ToggleLever();
+            RequestToggleLever();
         }
     }
 
-    private void ToggleLever()
+    private void RequestToggleLever()
+    {
+        if (PhotonNetwork.InRoom && photonView != null && photonView.ViewID != 0)
+        {
+            photonView.RPC(nameof(ToggleLeverRPC), RpcTarget.All);
+            return;
+        }
+
+        ToggleLeverRPC();
+    }
+
+    [PunRPC]
+    private void ToggleLeverRPC()
     {
         isOn = !isOn;
 
@@ -37,13 +50,25 @@ public class MovingLever : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        PhotonView playerView = other.GetComponentInParent<PhotonView>();
+        if (playerView != null && !playerView.IsMine)
+            return;
+
         if (other.CompareTag("Storm") || other.CompareTag("Starfy"))
+        {
             playerNear = true;
+        }
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
+        PhotonView playerView = other.GetComponentInParent<PhotonView>();
+        if (playerView != null && !playerView.IsMine)
+            return;
+
         if (other.CompareTag("Storm") || other.CompareTag("Starfy"))
+        {
             playerNear = false;
+        }
     }
 }

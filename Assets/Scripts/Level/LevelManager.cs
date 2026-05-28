@@ -16,10 +16,11 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private const byte ReturnToMenuRequestEvent = 4;
     private const byte ReturnToMenuEvent = 5;
     private const byte RestartEvent = 6;
+    private const byte FinishRequestEvent = 7;
+    private const byte VictoryEvent = 8;
 
     public int collectedStars;
 
-    public ExitDoor exitDoor;
     public CameraMove cameraMove;
     public Transform player;
 
@@ -68,23 +69,15 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         textCountDiamond.text = "x" + collectedStars.ToString();
     }
 
-    //private IEnumerator ShowDoorRoutine(Transform doorPoint)
-    //{
-    //    cameraMove.SetTarget(doorPoint);
-    //    yield return new WaitForSeconds(1f);
-    //    exitDoor.OpenDoor();
-    //    yield return new WaitForSeconds(2f);
-    //    cameraMove.SetTarget(player);
-    //}
-
     public void FinishLevel()
     {
-        if (levelFinished || !PhotonNetwork.IsMasterClient)
+        if (levelFinished)
             return;
 
-        if (SoundManager.Instance != null)
+        if (!ShouldActAsHost())
         {
-            SoundManager.Instance.PlayWin();
+            RaiseToMaster(FinishRequestEvent);
+            return;
         }
 
         levelFinished = true;
@@ -99,7 +92,37 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         {
             PhotonNetwork.LoadLevel("Level2");
         }
-        else if (buttonManager != null)
+        else
+            BroadcastVictory();
+    }
+
+    private void BroadcastVictory()
+    {
+        if (!ShouldActAsHost())
+            return;
+
+        if (PhotonNetwork.InRoom)
+            RaiseToAll(VictoryEvent);
+        else
+            ApplyVictory();
+    }
+
+    private void ApplyVictory()
+    {
+        if (buttonManager != null &&
+            buttonManager.winPanel != null &&
+            buttonManager.winPanel.activeSelf)
+            return;
+
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlayWin();
+        }
+
+        levelFinished = true;
+        SetLocalPlayerControl(false);
+
+        if (buttonManager != null)
         {
             buttonManager.ShowWinPanel();
         }
@@ -115,7 +138,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         if (levelFinished)
             return;
 
-        if (PhotonNetwork.IsMasterClient)
+        if (ShouldActAsHost())
         {
             BroadcastDefeat();
             return;
@@ -126,7 +149,10 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     private void BroadcastDefeat()
     {
-        RaiseToAll(DefeatEvent);
+        if (PhotonNetwork.InRoom)
+            RaiseToAll(DefeatEvent);
+        else
+            ApplyDefeat();
     }
 
     private void ApplyDefeat()
@@ -150,7 +176,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     public void RequestRestartLevel()
     {
-        if (PhotonNetwork.IsMasterClient)
+        if (ShouldActAsHost())
         {
             BroadcastRestartCurrentLevel();
             return;
@@ -161,7 +187,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     public void RequestReturnToMenu()
     {
-        if (PhotonNetwork.IsMasterClient)
+        if (ShouldActAsHost())
         {
             BroadcastReturnToMenu();
             return;
@@ -177,10 +203,15 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     private void BroadcastRestartCurrentLevel()
     {
-        if (!PhotonNetwork.IsMasterClient)
+        if (!ShouldActAsHost())
             return;
 
-        RaiseToAll(RestartEvent, SceneManager.GetActiveScene().name);
+        string sceneName = SceneManager.GetActiveScene().name;
+
+        if (PhotonNetwork.InRoom)
+            RaiseToAll(RestartEvent, sceneName);
+        else
+            RestartScene(sceneName);
     }
 
     private void RestartScene(string sceneName)
@@ -194,7 +225,10 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     private void BroadcastReturnToMenu()
     {
-        RaiseToAll(ReturnToMenuEvent);
+        if (PhotonNetwork.InRoom)
+            RaiseToAll(ReturnToMenuEvent);
+        else
+            ReturnToMenu();
     }
 
     private void ReturnToMenu()
@@ -267,6 +301,15 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
             case ReturnToMenuEvent:
                 ReturnToMenu();
                 break;
+
+            case FinishRequestEvent:
+                if (PhotonNetwork.IsMasterClient)
+                    FinishLevel();
+                break;
+
+            case VictoryEvent:
+                ApplyVictory();
+                break;
         }
     }
 
@@ -291,6 +334,11 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
             content,
             new RaiseEventOptions { Receivers = ReceiverGroup.All },
             SendOptions.SendReliable);
+    }
+
+    private bool ShouldActAsHost()
+    {
+        return !PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient;
     }
 
     private int GetCurrentLevelNumber()

@@ -1,6 +1,6 @@
 using System.Collections;
+using Photon.Pun;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class EnemyPig : MonoBehaviour
 {
@@ -29,6 +29,7 @@ public class EnemyPig : MonoBehaviour
     private Animator animator;
     private bool isDead;
     private Collider2D enemyCollider;
+    private PhotonView photonView;
 
     private void Awake()
     {
@@ -36,6 +37,7 @@ public class EnemyPig : MonoBehaviour
         sr= GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
         enemyCollider = GetComponent<Collider2D>();
+        photonView = GetComponent<PhotonView>();
     }
 
     private void FixedUpdate()
@@ -104,8 +106,31 @@ public class EnemyPig : MonoBehaviour
             }
     }
 
+    public void RequestDie()
+    {
+        if (isDead)
+            return;
+
+        if (PhotonNetwork.InRoom && photonView != null && photonView.ViewID != 0)
+        {
+            photonView.RPC(nameof(DieRPC), RpcTarget.All);
+            return;
+        }
+
+        Die();
+    }
+
+    [PunRPC]
+    private void DieRPC()
+    {
+        Die();
+    }
+
     public void Die()
     {
+        if (isDead)
+            return;
+
         isDead = true;
 
         rb.linearVelocity = Vector2.zero;

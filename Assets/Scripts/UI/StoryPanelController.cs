@@ -1,7 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using Photon.Pun;
 
 public class StoryPanelController : MonoBehaviour
 {
@@ -12,8 +10,6 @@ public class StoryPanelController : MonoBehaviour
 
     [SerializeField] private float textDelay = 5f;
     [SerializeField] private float loadDelay = 1f;
-
-    [SerializeField] private string nextSceneName;
 
     private void Start()
     {
@@ -47,9 +43,6 @@ public class StoryPanelController : MonoBehaviour
 
         yield return new WaitForSeconds(loadDelay);
 
-        if (!PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient)
-        {
-            PhotonNetwork.LoadLevel(nextSceneName);
-        }
+        LevelManager.Instance?.FinishLevel();
     }
 }

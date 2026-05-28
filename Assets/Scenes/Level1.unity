@@ -15546,7 +15546,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1f8b4013fe54a7c47a07b3d4ca1ba3e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
-  exitDoor: {fileID: 0}
   cameraMove: {fileID: 1010398288}
   player: {fileID: 0}
   buttonManager: {fileID: 1939205830}
@@ -19430,7 +19429,6 @@ MonoBehaviour:
   buttonAnimator: {fileID: 2133622678}
   textDelay: 5
   loadDelay: 1
-  nextSceneName: Level2
 --- !u!1001 &8604366335704157289
 PrefabInstance:
   m_ObjectHideFlags: 0

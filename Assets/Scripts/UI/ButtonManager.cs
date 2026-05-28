@@ -1,8 +1,6 @@
 using System.Collections;
-using Photon.Pun;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class ButtonManager : MonoBehaviour
 {
@@ -106,22 +104,9 @@ public class ButtonManager : MonoBehaviour
         LevelManager.Instance?.RequestReturnToMenu();
     }
 
-    public void LoadNextLevel()
-    {
-        Time.timeScale = 1f;
-
-        if (!PhotonNetwork.IsMasterClient)
-            return;
-
-        int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
-
-        if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
-            PhotonNetwork.LoadLevel(nextSceneIndex);
-        else
-            LevelManager.Instance?.RequestReturnToMenu();
-    }
     public void RestartGame()
     {
-        PhotonNetwork.LoadLevel("Level1");
+        Time.timeScale = 1f;
+        LevelManager.Instance?.RequestRestartLevel();
     }
 }

@@ -1,9 +1,8 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
-using Photon.Pun;
 
-public class VictoryPanel : MonoBehaviour
+public class FinishPanel : MonoBehaviour
 {
     [SerializeField] private Animator[] coinAnimators;
 
@@ -11,12 +10,11 @@ public class VictoryPanel : MonoBehaviour
 
     [SerializeField] private float coinDelay = 1f;
 
-    [SerializeField] private string menuSceneName = "MainMenu";
-    [SerializeField] private string restartSceneName = "Level2";
-
     private void OnEnable()
     {
-        int collectedCoins = LevelManager.Instance.collectedStars;
+        int collectedCoins = LevelManager.Instance != null
+            ? LevelManager.Instance.collectedStars
+            : 0;
 
         coinsText.text =
             collectedCoins + "/" + coinAnimators.Length + " монет";
@@ -26,7 +24,9 @@ public class VictoryPanel : MonoBehaviour
 
     private IEnumerator ShowCollectedCoins(int collectedCoins)
     {
-        for (int i = 0; i < collectedCoins; i++)
+        int visibleCoins = Mathf.Min(collectedCoins, coinAnimators.Length);
+
+        for (int i = 0; i < visibleCoins; i++)
         {
             coinAnimators[i].SetBool("isCollected", true);
 
@@ -36,11 +36,11 @@ public class VictoryPanel : MonoBehaviour
 
     public void BackToMenu()
     {
-        PhotonNetwork.LoadLevel(menuSceneName);
+        LevelManager.Instance?.RequestReturnToMenu();
     }
 
     public void RestartGame()
     {
-        PhotonNetwork.LoadLevel(restartSceneName);
+        LevelManager.Instance?.RequestRestartLevel();
     }
 }

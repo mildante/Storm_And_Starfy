@@ -42,6 +42,7 @@ MonoBehaviour:
   - RPC_OpenCharacterSelection
   - ToggleLeverRPC
   - StartDialogueRPC
+  - DieRPC
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

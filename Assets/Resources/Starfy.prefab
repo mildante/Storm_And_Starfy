@@ -193,7 +193,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StarfyMovement
   speed: 5
-  jumpForce: 6
+  jumpForce: 7
   dashForce: 10
   dashDuration: 0.35
   dashCooldown: 1

@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using NUnit.Framework;
 
@@ -6,7 +7,10 @@ public class MainMenuManagerTests
     [Test]
     public void CanStartJoinRoomRequest_ReturnsFalse_WhenAlreadyInRoom()
     {
-        MethodInfo method = typeof(MainMenuManager).GetMethod(
+        Type mainMenuManagerType = Type.GetType("MainMenuManager, Assembly-CSharp");
+        Assert.NotNull(mainMenuManagerType);
+
+        MethodInfo method = mainMenuManagerType.GetMethod(
             "CanStartJoinRoomRequest",
             BindingFlags.NonPublic | BindingFlags.Static);
 

@@ -150,7 +150,6 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b7c6f03af6688ac438e97bb3723fdde4, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WheelCheckpoint
+  m_EditorClassIdentifier: Assembly-CSharp::ShipHelmCheckpoint
   comments: []
-  finishPanel: {fileID: 0}
   dialogueDelay: 6
