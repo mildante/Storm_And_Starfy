@@ -406,19 +406,26 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         if (startBlackPanel == null)
             yield break;
 
-        Time.timeScale = 0f;
-
         startBlackPanel.SetActive(true);
+
+        SetLocalPlayerControl(false);
 
         if (startPanelAnimator != null)
         {
             startPanelAnimator.Play("StartPanelHide");
         }
 
-        yield return new WaitForSecondsRealtime(1f);
+        if (SceneManager.GetActiveScene().name == "Level1")
+        {
+            yield return new WaitForSecondsRealtime(17.5f);
+        }
+        else
+        {
+            yield return new WaitForSecondsRealtime(1f);
+        }
 
         startBlackPanel.SetActive(false);
 
-        Time.timeScale = 1f;
+        SetLocalPlayerControl(true);
     }
 }

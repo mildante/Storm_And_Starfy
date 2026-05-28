@@ -9,6 +9,7 @@ public class TutorialTrigger : MonoBehaviour
     public string message;
 
     public TMP_Text tutorialText;
+    public GameObject tutorialPanel;
 
     public string[] targetTags;
 
@@ -18,7 +19,8 @@ public class TutorialTrigger : MonoBehaviour
     {
         PhotonView pv = other.GetComponent<PhotonView>();
 
-        if (pv == null || !pv.IsMine) return;
+        if (pv == null || !pv.IsMine)
+            return;
 
         bool correctTag = false;
 
@@ -31,23 +33,25 @@ public class TutorialTrigger : MonoBehaviour
             }
         }
 
-        if (!correctTag) return;
+        if (!correctTag)
+            return;
 
-        tutorialText.gameObject.SetActive(true);
+        tutorialPanel.SetActive(true);
+
         tutorialText.text = message;
 
         currentMessageID++;
 
-        StartCoroutine(HideTextRoutine(currentMessageID));
+        StartCoroutine(HideRoutine(currentMessageID));
     }
 
-    private IEnumerator HideTextRoutine(int messageID)
+    private IEnumerator HideRoutine(int messageID)
     {
         yield return new WaitForSeconds(4f);
 
         if (messageID == currentMessageID)
         {
-            tutorialText.gameObject.SetActive(false);
+            tutorialPanel.SetActive(false);
         }
     }
 }
