@@ -1,21 +1,33 @@
 using System.Collections;
 using System.Collections.Generic;
+using ExitGames.Client.Photon;
 using UnityEngine;
 using Photon.Pun;
+using Photon.Realtime;
 
-public class ShipHelmCheckpoint : MonoBehaviourPun
+public class ShipHelmCheckpoint : MonoBehaviourPunCallbacks, IOnEventCallback
 {
+    private const byte StartHelmDialogueEvent = 30;
+    private const string StartHelmDialoguePayload = "StartShipHelmDialogue";
+
     [SerializeField] private GameObject[] comments;
 
     [SerializeField] private float dialogueDelay = 6.3f;
 
     private HashSet<GameObject> playersInside = new();
     private bool startedDialogue = false;
+    private bool dialogueRequested = false;
 
     private void Start()
     {
+        if (comments == null)
+            return;
+
         foreach (GameObject comment in comments)
         {
+            if (comment == null)
+                continue;
+
             comment.SetActive(false);
         }
 
@@ -30,7 +42,7 @@ public class ShipHelmCheckpoint : MonoBehaviourPun
 
         if (!startedDialogue && playersInside.Count >= 2)
         {
-            photonView.RPC(nameof(StartDialogueRPC), RpcTarget.All);
+            RequestStartDialogue();
         }
     }
 
@@ -42,8 +54,39 @@ public class ShipHelmCheckpoint : MonoBehaviourPun
         playersInside.Remove(other.gameObject);
     }
 
-    [PunRPC]
-    private void StartDialogueRPC()
+    private void RequestStartDialogue()
+    {
+        if (dialogueRequested || startedDialogue)
+            return;
+
+        dialogueRequested = true;
+
+        if (!PhotonNetwork.InRoom)
+        {
+            StartDialogue();
+            return;
+        }
+
+        PhotonNetwork.RaiseEvent(
+            StartHelmDialogueEvent,
+            StartHelmDialoguePayload,
+            new RaiseEventOptions { Receivers = ReceiverGroup.All },
+            SendOptions.SendReliable);
+    }
+
+    public void OnEvent(EventData photonEvent)
+    {
+        if (photonEvent.Code != StartHelmDialogueEvent)
+            return;
+
+        if (!(photonEvent.CustomData is string payload) ||
+            payload != StartHelmDialoguePayload)
+            return;
+
+        StartDialogue();
+    }
+
+    private void StartDialogue()
     {
         if (startedDialogue)
             return;
@@ -57,11 +100,17 @@ public class ShipHelmCheckpoint : MonoBehaviourPun
     {
         DisablePlayers();
 
-        foreach (GameObject comment in comments)
+        if (comments != null)
         {
-            comment.SetActive(true);
+            foreach (GameObject comment in comments)
+            {
+                if (comment == null)
+                    continue;
 
-            yield return new WaitForSeconds(dialogueDelay);
+                comment.SetActive(true);
+
+                yield return new WaitForSeconds(dialogueDelay);
+            }
         }
 
         LevelManager.Instance?.FinishLevel();

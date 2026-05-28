@@ -968,15 +968,15 @@ PrefabInstance:
     - target: {fileID: -5296544334408178131, guid: 4830198949a15724a96f06f7ebf72132, type: 3}
       propertyPath: 'comments.Array.data[0]'
       value: 
-      objectReference: {fileID: 589376907}
+      objectReference: {fileID: 93952793}
     - target: {fileID: -5296544334408178131, guid: 4830198949a15724a96f06f7ebf72132, type: 3}
       propertyPath: 'comments.Array.data[1]'
       value: 
-      objectReference: {fileID: 1051302094}
+      objectReference: {fileID: 1038593811}
     - target: {fileID: -5296544334408178131, guid: 4830198949a15724a96f06f7ebf72132, type: 3}
       propertyPath: 'comments.Array.data[2]'
       value: 
-      objectReference: {fileID: 221095295}
+      objectReference: {fileID: 195185759}
     - target: {fileID: 1203879331571225229, guid: 4830198949a15724a96f06f7ebf72132, type: 3}
       propertyPath: m_IsTrigger
       value: 1
@@ -4135,6 +4135,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelManager
   startBlackPanel: {fileID: 0}
   startPanelAnimator: {fileID: 0}
+  startDialogueComments:
+  - {fileID: 589376907}
+  - {fileID: 1051302094}
+  - {fileID: 221095295}
+  startDialogueDelay: 0.5
   collectedStars: 0
   cameraMove: {fileID: 1010398288}
   player: {fileID: 0}

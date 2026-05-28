@@ -22,6 +22,8 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     public GameObject startBlackPanel;
     public Animator startPanelAnimator;
+    [SerializeField] private GameObject[] startDialogueComments;
+    [SerializeField] private float startDialogueDelay = 0.5f;
 
     public int collectedStars;
 
@@ -42,6 +44,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private void Awake()
     {
         Instance = this;
+        SetStartDialogueCommentsActive(false);
     }
 
     private void Start()
@@ -56,6 +59,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         }
 
         StartCoroutine(LevelStartRoutine());
+        StartCoroutine(StartDialogueRoutine());
     }
 
     public void CollectStar()
@@ -420,5 +424,42 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         startBlackPanel.SetActive(false);
 
         Time.timeScale = 1f;
+    }
+
+    private IEnumerator StartDialogueRoutine()
+    {
+        if (startDialogueComments == null || startDialogueComments.Length == 0)
+            yield break;
+
+        yield return new WaitForSecondsRealtime(startDialogueDelay);
+
+        foreach (GameObject comment in startDialogueComments)
+        {
+            if (comment == null)
+                continue;
+
+            comment.SetActive(true);
+
+            Animator animator = comment.GetComponent<Animator>();
+            if (animator != null)
+            {
+                animator.Rebind();
+                animator.Update(0f);
+            }
+        }
+    }
+
+    private void SetStartDialogueCommentsActive(bool isActive)
+    {
+        if (startDialogueComments == null)
+            return;
+
+        foreach (GameObject comment in startDialogueComments)
+        {
+            if (comment != null)
+            {
+                comment.SetActive(isActive);
+            }
+        }
     }
 }
