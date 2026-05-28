@@ -64,7 +64,64 @@ public class PlayerMovement : MonoBehaviour
 
     private void CheckGround()
     {
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+        isGrounded =
+            Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer) ||
+            IsStandingOnOtherPlayer();
+    }
+
+    private bool IsStandingOnOtherPlayer()
+    {
+        Collider2D ownCollider = GetComponent<Collider2D>();
+
+        if (ownCollider == null || groundCheck == null)
+            return false;
+
+        Collider2D[] hits = Physics2D.OverlapCircleAll(
+            groundCheck.position,
+            groundCheckRadius);
+
+        foreach (Collider2D hit in hits)
+        {
+            if (hit == null || IsOwnCollider(hit) || !IsPlayerCollider(hit))
+                continue;
+
+            Bounds ownBounds = ownCollider.bounds;
+            Bounds supportBounds = hit.bounds;
+            float horizontalOverlap =
+                Mathf.Min(ownBounds.max.x, supportBounds.max.x) -
+                Mathf.Max(ownBounds.min.x, supportBounds.min.x);
+
+            if (horizontalOverlap <= 0f)
+                continue;
+
+            float supportTolerance = Mathf.Max(groundCheckRadius * 2f, 0.05f);
+
+            if (ownBounds.min.y >= supportBounds.max.y - supportTolerance)
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool IsOwnCollider(Collider2D hit)
+    {
+        GameObject owner = hit.attachedRigidbody != null
+            ? hit.attachedRigidbody.gameObject
+            : hit.gameObject;
+
+        return owner == gameObject || hit.transform.IsChildOf(transform);
+    }
+
+    private bool IsPlayerCollider(Collider2D hit)
+    {
+        GameObject owner = hit.attachedRigidbody != null
+            ? hit.attachedRigidbody.gameObject
+            : hit.gameObject;
+
+        return owner.CompareTag("Storm") ||
+               owner.CompareTag("Starfy") ||
+               hit.CompareTag("Storm") ||
+               hit.CompareTag("Starfy");
     }
 
     private void Flip()
@@ -83,7 +140,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void Attack()
     {
-        if (Input.GetKeyDown(KeyCode.F) && !isAttacking)
+        if (Input.GetKeyDown(KeyCode.F) && !isAttacking && isGrounded)
         {
             StartCoroutine(AttackRoutine());
         }
@@ -92,10 +149,7 @@ public class PlayerMovement : MonoBehaviour
     {
         isAttacking = true;
 
-        if (SoundManager.Instance != null)
-        {
-            SoundManager.Instance.PlayAttack();
-        }
+        PlayAttackSound();
 
         Collider2D[] enemies = Physics2D.OverlapCircleAll(
             attackPoint.position,
@@ -124,6 +178,26 @@ public class PlayerMovement : MonoBehaviour
         yield return new WaitForSeconds(attackDuration);
 
         isAttacking = false;
+    }
+
+    private void PlayAttackSound()
+    {
+        if (PhotonNetwork.InRoom && photonView != null && photonView.ViewID != 0)
+        {
+            photonView.RPC(nameof(PlayAttackSoundRPC), RpcTarget.All);
+            return;
+        }
+
+        PlayAttackSoundRPC();
+    }
+
+    [PunRPC]
+    private void PlayAttackSoundRPC()
+    {
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlayAttack();
+        }
     }
 
     private void UpdateAnimations()
