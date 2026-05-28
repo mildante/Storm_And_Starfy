@@ -49,6 +49,7 @@ public class ButtonManager : MonoBehaviour
         LevelManager.Instance?.SetLocalPlayerControl(false);
         pausePanel.SetActive(true);
         pauseAnimator.SetBool("isOpen", true);
+        SoundManager.Instance?.PlayPause();
     }
 
     public void ContinueGame()
@@ -57,6 +58,7 @@ public class ButtonManager : MonoBehaviour
         LevelManager.Instance?.SetLocalPlayerControl(true);
         pauseAnimator.SetBool("isOpen", false);
         StartCoroutine(HidePausePanel());
+        SoundManager.Instance?.PlayPause();
     }
 
     private IEnumerator HidePausePanel()

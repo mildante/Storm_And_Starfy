@@ -38,6 +38,11 @@ public class MovingLever : MonoBehaviourPun
     {
         isOn = !isOn;
 
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlayLever();
+        }
+
         Vector3 scale = transform.localScale;
         scale.x = isOn ? -originalScaleX : originalScaleX;
         transform.localScale = scale;

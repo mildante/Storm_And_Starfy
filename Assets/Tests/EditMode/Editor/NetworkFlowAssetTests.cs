@@ -11,6 +11,7 @@ public class NetworkFlowAssetTests
     private const string StoryPanelScriptPath = "Assets/Scripts/UI/StoryPanelController.cs";
     private const string StarCollectibleScriptPath = "Assets/Scripts/Level/StarCollectible.cs";
     private const string PlayerMovementScriptPath = "Assets/Scripts/Player/PlayerMovement.cs";
+    private const string StarfyMovementScriptPath = "Assets/Scripts/Player/StarfyMovement.cs";
     private const string StormPrefabPath = "Assets/Resources/Storm.prefab";
     private const string StarfyPrefabPath = "Assets/Resources/Starfy.prefab";
     private const string MovingLeverScriptPath = "Assets/Scripts/Level/MovingLever.cs";
@@ -121,6 +122,21 @@ public class NetworkFlowAssetTests
 
         Assert.That(playerMovement, Does.Contain("pig.RequestDie()"));
         Assert.That(playerMovement, Does.Contain("kingPig.RequestDie()"));
+    }
+
+    [Test]
+    public void PlayerMovement_GroundsCharactersOnTopOfEachOther()
+    {
+        string playerMovement = File.ReadAllText(PlayerMovementScriptPath);
+        string starfyMovement = File.ReadAllText(StarfyMovementScriptPath);
+
+        Assert.That(playerMovement, Does.Contain("IsStandingOnOtherPlayer()"));
+        Assert.That(playerMovement, Does.Contain("CompareTag(\"Storm\")"));
+        Assert.That(playerMovement, Does.Contain("CompareTag(\"Starfy\")"));
+
+        Assert.That(starfyMovement, Does.Contain("IsStandingOnOtherPlayer()"));
+        Assert.That(starfyMovement, Does.Contain("CompareTag(\"Storm\")"));
+        Assert.That(starfyMovement, Does.Contain("CompareTag(\"Starfy\")"));
     }
 
     [Test]

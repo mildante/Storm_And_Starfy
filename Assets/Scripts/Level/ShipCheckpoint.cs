@@ -19,6 +19,7 @@ public class ShipCheckpoint : MonoBehaviour
 
         if (!transitionStarted && playersInside.Count >= 2)
         {
+            DisablePlayersOnShip();
             StartCoroutine(StartTransition());
         }
     }
@@ -44,6 +45,38 @@ public class ShipCheckpoint : MonoBehaviour
         else
         {
             transitionStarted = false;
+        }
+    }
+
+    private void DisablePlayersOnShip()
+    {
+        foreach (GameObject player in playersInside)
+        {
+            DisablePlayer(player);
+        }
+    }
+
+    private void DisablePlayer(GameObject player)
+    {
+        if (player == null)
+            return;
+
+        PlayerMovement stormMovement = player.GetComponent<PlayerMovement>();
+        if (stormMovement != null)
+        {
+            stormMovement.enabled = false;
+        }
+
+        StarfyMovement starfyMovement = player.GetComponent<StarfyMovement>();
+        if (starfyMovement != null)
+        {
+            starfyMovement.enabled = false;
+        }
+
+        Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
         }
     }
 }
