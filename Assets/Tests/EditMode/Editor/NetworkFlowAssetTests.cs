@@ -67,7 +67,19 @@ public class NetworkFlowAssetTests
         string storyPanel = File.ReadAllText(StoryPanelScriptPath);
 
         Assert.That(storyPanel, Does.Not.Contain("PhotonNetwork.LoadLevel"));
-        Assert.That(storyPanel, Does.Contain("FinishLevel"));
+        Assert.That(storyPanel, Does.Contain("PhotonNetwork.IsMasterClient"));
+        Assert.That(storyPanel, Does.Contain("RequestLoadNextLevel"));
+    }
+
+    [Test]
+    public void LevelManager_HasHostDrivenLevel2TransitionRequest()
+    {
+        string levelManager = File.ReadAllText(LevelManagerScriptPath);
+
+        Assert.That(levelManager, Does.Contain("NextLevelRequestEvent"));
+        Assert.That(levelManager, Does.Contain("RequestLoadNextLevel"));
+        Assert.That(levelManager, Does.Contain("LoadLevel2AsHost"));
+        Assert.That(levelManager, Does.Contain("PhotonNetwork.LoadLevel(\"Level2\")"));
     }
 
     [Test]
@@ -129,8 +141,21 @@ public class NetworkFlowAssetTests
         string waterDamage = File.ReadAllText(WaterDamageScriptPath);
 
         Assert.That(waterDamage, Does.Contain("Dictionary<GameObject, Coroutine>"));
-        Assert.That(waterDamage, Does.Contain("damageCoroutines[other.gameObject]"));
-        Assert.That(waterDamage, Does.Contain("damageCoroutines.Remove(other.gameObject)"));
+        Assert.That(waterDamage, Does.Contain("damageCoroutines[player]"));
+        Assert.That(waterDamage, Does.Contain("damageCoroutines.Remove(player)"));
+        Assert.That(waterDamage, Does.Contain("OnTriggerStay2D"));
+        Assert.That(waterDamage, Does.Contain("health.TakeDamage()"));
+        Assert.That(waterDamage, Does.Not.Contain("health.KillInstantly()"));
+    }
+
+    [Test]
+    public void Level1Water_UsesFilledCompositeTrigger()
+    {
+        string level1Scene = File.ReadAllText("Assets/Scenes/Level1.unity");
+
+        Assert.That(level1Scene, Does.Contain("m_EditorClassIdentifier: Assembly-CSharp::WaterDamage"));
+        Assert.That(level1Scene, Does.Contain("m_CompositeGameObject: {fileID: 899309640}"));
+        Assert.That(level1Scene, Does.Contain("m_GeometryType: 1"));
     }
 
     [Test]

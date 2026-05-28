@@ -1,5 +1,7 @@
 using System.Collections;
+using Photon.Pun;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class StoryPanelController : MonoBehaviour
 {
@@ -10,6 +12,8 @@ public class StoryPanelController : MonoBehaviour
 
     [SerializeField] private float textDelay = 5f;
     [SerializeField] private float loadDelay = 1f;
+
+    private bool continueRequested;
 
     private void Start()
     {
@@ -30,19 +34,53 @@ public class StoryPanelController : MonoBehaviour
         }
 
         nextButton.SetActive(true);
+        UpdateContinueButtonVisibility();
     }
 
     public void ContinueGame()
     {
+        if (continueRequested || !CanShowContinueButton())
+            return;
+
+        continueRequested = true;
+        SetContinueButtonInteractable(false);
         StartCoroutine(LoadNextScene());
     }
 
     private IEnumerator LoadNextScene()
     {
-        buttonAnimator.SetBool("isVisible", false);
+        if (buttonAnimator != null)
+        {
+            buttonAnimator.SetBool("isVisible", false);
+        }
 
         yield return new WaitForSeconds(loadDelay);
 
-        LevelManager.Instance?.FinishLevel();
+        LevelManager.Instance?.RequestLoadNextLevel();
+    }
+
+    private void UpdateContinueButtonVisibility()
+    {
+        if (nextButton != null)
+        {
+            nextButton.SetActive(CanShowContinueButton());
+        }
+    }
+
+    private bool CanShowContinueButton()
+    {
+        return !PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient;
+    }
+
+    private void SetContinueButtonInteractable(bool isInteractable)
+    {
+        if (nextButton == null)
+            return;
+
+        Button button = nextButton.GetComponent<Button>();
+        if (button != null)
+        {
+            button.interactable = isInteractable;
+        }
     }
 }

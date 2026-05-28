@@ -123,7 +123,7 @@ SpriteRenderer:
   m_MaskInteraction: 0
   m_Sprite: {fileID: -427404151018760640, guid: 9cb7f1c779d5062458f0c4ecf106f5af, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_FlipX: 0
+  m_FlipX: 1
   m_FlipY: 0
   m_DrawMode: 0
   m_Size: {x: 1, y: 1}
@@ -147,7 +147,7 @@ Rigidbody2D:
   m_LinearDamping: 0
   m_AngularDamping: 0
   m_GravityScale: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: f661d8bd9286f61479fda85886265879, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -192,7 +192,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5761b3f994b5e8c42a3e4abc3f0bd3f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StarfyMovement
-  speed: 5
+  speed: 4
   jumpForce: 7
   dashForce: 10
   dashDuration: 0.35
@@ -236,7 +236,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.00013121217, y: 0.0049212202}
+  m_Offset: {x: -0.00021819025, y: 0.0049212202}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -246,7 +246,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.2481216, y: 0.2416765}
+  m_Size: {x: 0.24183218, y: 0.2416765}
   m_EdgeRadius: 0
 --- !u!114 &1308095448182298096
 MonoBehaviour:

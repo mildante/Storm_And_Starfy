@@ -18,6 +18,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private const byte RestartEvent = 6;
     private const byte FinishRequestEvent = 7;
     private const byte VictoryEvent = 8;
+    private const byte NextLevelRequestEvent = 9;
 
     public int collectedStars;
 
@@ -26,6 +27,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     private bool levelFinished = false;
     private bool isLeavingRoom = false;
+    private bool isSceneTransitionInProgress = false;
     public ButtonManager buttonManager;
 
     public GameObject heart1;
@@ -90,10 +92,39 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
         if (SceneManager.GetActiveScene().name == "Level1")
         {
-            PhotonNetwork.LoadLevel("Level2");
+            LoadLevel2AsHost();
         }
         else
             BroadcastVictory();
+    }
+
+    public void RequestLoadNextLevel()
+    {
+        if (ShouldActAsHost())
+        {
+            LoadLevel2AsHost();
+            return;
+        }
+
+        RaiseToMaster(NextLevelRequestEvent);
+    }
+
+    private void LoadLevel2AsHost()
+    {
+        if (!ShouldActAsHost() || isSceneTransitionInProgress)
+            return;
+
+        if (SceneManager.GetActiveScene().name != "Level1")
+            return;
+
+        isSceneTransitionInProgress = true;
+        levelFinished = true;
+        Time.timeScale = 1f;
+
+        if (PhotonNetwork.InRoom)
+            PhotonNetwork.LoadLevel("Level2");
+        else
+            SceneManager.LoadScene("Level2");
     }
 
     private void BroadcastVictory()
@@ -309,6 +340,11 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
             case VictoryEvent:
                 ApplyVictory();
+                break;
+
+            case NextLevelRequestEvent:
+                if (PhotonNetwork.IsMasterClient)
+                    LoadLevel2AsHost();
                 break;
         }
     }
