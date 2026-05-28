@@ -92,6 +92,11 @@ public class PlayerMovement : MonoBehaviour
     {
         isAttacking = true;
 
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlayAttack();
+        }
+
         Collider2D[] enemies = Physics2D.OverlapCircleAll(
             attackPoint.position,
             attackRadius,

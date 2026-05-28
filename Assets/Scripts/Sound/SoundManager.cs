@@ -18,6 +18,10 @@ public class SoundManager : MonoBehaviour
     [SerializeField] private AudioClip winSound;
     [SerializeField] private AudioClip loseSound;
     [SerializeField] private AudioClip buttonSound;
+    [SerializeField] private AudioClip dashSound;
+    [SerializeField] private AudioClip attackSound;
+    [SerializeField] private AudioClip leverSound;
+    [SerializeField] private AudioClip pauseSound;
 
     private bool soundEnabled = true;
 
@@ -97,6 +101,26 @@ public class SoundManager : MonoBehaviour
     public void PlayButton()
     {
         PlaySfx(buttonSound);
+    }
+
+    public void PlayDash()
+    {
+        PlaySfx(dashSound);
+    }
+
+    public void PlayAttack()
+    {
+        PlaySfx(attackSound);
+    }
+
+    public void PlayLever()
+    {
+        PlaySfx(leverSound);
+    }
+
+    public void PlayPause()
+    {
+        PlaySfx(pauseSound);
     }
 
     private void PlaySfx(AudioClip clip)

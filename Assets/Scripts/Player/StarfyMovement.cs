@@ -89,6 +89,11 @@ public class StarfyMovement : MonoBehaviour
         canDash = false;
         isDashing = true;
 
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlayDash();
+        }
+
         float gravity = rb.gravityScale;
         rb.gravityScale = 0f;
 
