@@ -1,5 +1,7 @@
+using Photon.Pun;
 using TMPro;
 using UnityEngine;
+using System.Collections;
 
 public class TutorialTrigger : MonoBehaviour
 {
@@ -10,11 +12,13 @@ public class TutorialTrigger : MonoBehaviour
 
     public string[] targetTags;
 
-    private bool wasShown = false;
+    private static int currentMessageID = 0;
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (wasShown) return;
+        PhotonView pv = other.GetComponent<PhotonView>();
+
+        if (pv == null || !pv.IsMine) return;
 
         bool correctTag = false;
 
@@ -29,17 +33,21 @@ public class TutorialTrigger : MonoBehaviour
 
         if (!correctTag) return;
 
-        wasShown = true;
-
         tutorialText.gameObject.SetActive(true);
         tutorialText.text = message;
 
-        CancelInvoke(nameof(HideText));
-        Invoke(nameof(HideText), 4f);
+        currentMessageID++;
+
+        StartCoroutine(HideTextRoutine(currentMessageID));
     }
 
-    private void HideText()
+    private IEnumerator HideTextRoutine(int messageID)
     {
-        tutorialText.gameObject.SetActive(false);
+        yield return new WaitForSeconds(4f);
+
+        if (messageID == currentMessageID)
+        {
+            tutorialText.gameObject.SetActive(false);
+        }
     }
 }

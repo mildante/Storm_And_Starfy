@@ -109,4 +109,9 @@ public class ButtonManager : MonoBehaviour
         Time.timeScale = 1f;
         LevelManager.Instance?.RequestRestartLevel();
     }
+    public void Continue()
+    {
+        Time.timeScale = 1f;
+        LevelManager.Instance?.RequestLoadNextLevel();
+    }
 }

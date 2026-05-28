@@ -20,6 +20,9 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private const byte VictoryEvent = 8;
     private const byte NextLevelRequestEvent = 9;
 
+    public GameObject startBlackPanel;
+    public Animator startPanelAnimator;
+
     public int collectedStars;
 
     public CameraMove cameraMove;
@@ -51,6 +54,8 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         {
             SoundManager.Instance.PlayLevelMusic(GetCurrentLevelNumber());
         }
+
+        StartCoroutine(LevelStartRoutine());
     }
 
     public void CollectStar()
@@ -395,5 +400,25 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     public void SetPlayer(Transform playerTransform)
     {
         player = playerTransform;
+    }
+    private IEnumerator LevelStartRoutine()
+    {
+        if (startBlackPanel == null)
+            yield break;
+
+        Time.timeScale = 0f;
+
+        startBlackPanel.SetActive(true);
+
+        if (startPanelAnimator != null)
+        {
+            startPanelAnimator.Play("StartPanelHide");
+        }
+
+        yield return new WaitForSecondsRealtime(1f);
+
+        startBlackPanel.SetActive(false);
+
+        Time.timeScale = 1f;
     }
 }
