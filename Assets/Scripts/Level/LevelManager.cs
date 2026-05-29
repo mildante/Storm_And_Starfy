@@ -26,7 +26,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private static int completedLevelStars = 0;
 
     public GameObject startBlackPanel;
-    public Animator startPanelAnimator;
+
     [SerializeField] private GameObject[] startDialogueComments;
     [SerializeField] private float startDialogueDelay = 0.5f;
 
@@ -498,21 +498,15 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
         SetLocalPlayerControl(false);
 
-        if (startPanelAnimator != null)
-        {
-            startPanelAnimator.Play("StartPanelHide");
-        }
-
         if (SceneManager.GetActiveScene().name == "Level1")
         {
             yield return new WaitForSecondsRealtime(17.5f);
         }
         else
         {
-            yield return new WaitForSecondsRealtime(1f);
+            yield return new WaitForSecondsRealtime(2f);
+            startBlackPanel.SetActive(false);
         }
-
-        startBlackPanel.SetActive(false);
 
         SetLocalPlayerControl(true);
     }
