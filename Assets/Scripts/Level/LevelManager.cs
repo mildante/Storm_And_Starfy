@@ -25,7 +25,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     [SerializeField] private GameObject[] startDialogueComments;
     [SerializeField] private float startDialogueDelay = 0.5f;
 
-    public int collectedStars;
+    public int collectedStars = 0;
 
     public CameraMove cameraMove;
     public Transform player;
@@ -49,8 +49,6 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     private void Start()
     {
-        collectedStars = 0;
-
         UpdateDiamondUI();
 
         if (SoundManager.Instance != null)

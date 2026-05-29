@@ -55,7 +55,7 @@ public class MainMenuManager : MonoBehaviourPunCallbacks
     private readonly Vector3 selectedScale = new Vector3(1.15f, 1.15f, 1f);
 
     private const string CharacterKey = "SelectedChar";
-    private const string LevelName = "Level2";
+    private const string LevelName = "Level1";
 
     private bool isRoomRequestInProgress;
     private bool isSceneTransitionInProgress;
