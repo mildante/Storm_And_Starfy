@@ -10,6 +10,8 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 {
     public static LevelManager Instance { get; private set; }
 
+    public const int TotalStarsInGame = 8;
+
     private const byte DefeatRequestEvent = 1;
     private const byte DefeatEvent = 2;
     private const byte RestartRequestEvent = 3;
@@ -19,6 +21,9 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private const byte FinishRequestEvent = 7;
     private const byte VictoryEvent = 8;
     private const byte NextLevelRequestEvent = 9;
+    private const string CompletedLevelStarsProperty = "CompletedLevelStars";
+
+    private static int completedLevelStars = 0;
 
     public GameObject startBlackPanel;
     public Animator startPanelAnimator;
@@ -44,6 +49,18 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
     private void Awake()
     {
         Instance = this;
+
+        string activeSceneName = SceneManager.GetActiveScene().name;
+
+        if (activeSceneName == "Level1")
+        {
+            ResetRunProgress();
+        }
+        else
+        {
+            SyncCompletedStarsFromRoom();
+        }
+
         SetStartDialogueCommentsActive(false);
     }
 
@@ -99,6 +116,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
         if (SceneManager.GetActiveScene().name == "Level1")
         {
+            CommitCurrentLevelStars();
             LoadLevel2AsHost();
         }
         else
@@ -124,6 +142,7 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         if (SceneManager.GetActiveScene().name != "Level1")
             return;
 
+        CommitCurrentLevelStars();
         isSceneTransitionInProgress = true;
         levelFinished = true;
         Time.timeScale = 1f;
@@ -151,6 +170,8 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
             buttonManager.winPanel != null &&
             buttonManager.winPanel.activeSelf)
             return;
+
+        SyncCompletedStarsFromRoom();
 
         if (SoundManager.Instance != null)
         {
@@ -258,7 +279,11 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
             return;
 
         Time.timeScale = 1f;
-        PhotonNetwork.LoadLevel(sceneName);
+
+        if (PhotonNetwork.InRoom)
+            PhotonNetwork.LoadLevel(sceneName);
+        else
+            SceneManager.LoadScene(sceneName);
     }
 
     private void BroadcastReturnToMenu()
@@ -280,9 +305,18 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
         if (PhotonNetwork.InRoom)
         {
             PhotonNetwork.LeaveRoom();
+            return;
         }
 
         SceneManager.LoadScene("MainMenu");
+    }
+
+    public override void OnLeftRoom()
+    {
+        if (isLeavingRoom)
+        {
+            SceneManager.LoadScene("MainMenu");
+        }
     }
 
     public void SetLocalPlayerControl(bool isEnabled)
@@ -396,13 +430,65 @@ public class LevelManager : MonoBehaviourPunCallbacks, IOnEventCallback
 
     public int GetScore()
     {
-        return collectedStars * 100;
+        return GetCollectedStarsForRun() * 100;
+    }
+
+    public int GetCollectedStarsForRun()
+    {
+        SyncCompletedStarsFromRoom();
+        return Mathf.Clamp(completedLevelStars + collectedStars, 0, TotalStarsInGame);
     }
 
     public void SetPlayer(Transform playerTransform)
     {
         player = playerTransform;
     }
+
+    private void CommitCurrentLevelStars()
+    {
+        if (SceneManager.GetActiveScene().name != "Level1")
+            return;
+
+        completedLevelStars = Mathf.Clamp(collectedStars, 0, TotalStarsInGame);
+
+        if (PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom != null)
+        {
+            ExitGames.Client.Photon.Hashtable roomProperties = new ExitGames.Client.Photon.Hashtable
+            {
+                { CompletedLevelStarsProperty, completedLevelStars }
+            };
+
+            PhotonNetwork.CurrentRoom.SetCustomProperties(roomProperties);
+        }
+    }
+
+    private void ResetRunProgress()
+    {
+        completedLevelStars = 0;
+
+        if (PhotonNetwork.InRoom && PhotonNetwork.IsMasterClient && PhotonNetwork.CurrentRoom != null)
+        {
+            ExitGames.Client.Photon.Hashtable roomProperties = new ExitGames.Client.Photon.Hashtable
+            {
+                { CompletedLevelStarsProperty, completedLevelStars }
+            };
+
+            PhotonNetwork.CurrentRoom.SetCustomProperties(roomProperties);
+        }
+    }
+
+    private void SyncCompletedStarsFromRoom()
+    {
+        if (!PhotonNetwork.InRoom || PhotonNetwork.CurrentRoom == null)
+            return;
+
+        if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(CompletedLevelStarsProperty, out object starsValue) &&
+            starsValue is int stars)
+        {
+            completedLevelStars = Mathf.Clamp(stars, 0, TotalStarsInGame);
+        }
+    }
+
     private IEnumerator LevelStartRoutine()
     {
         if (startBlackPanel == null)
